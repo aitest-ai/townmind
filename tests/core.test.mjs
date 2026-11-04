@@ -5,7 +5,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { Engine, EventBus, CommandRegistry, FrameworkError, parseOverrides, resolveEnabled, validatePack } from '../src/core/index.js';
 import { checkBoundaries } from '../scripts/check-boundaries.mjs';
-import { readPackDir, readCatalog, listPackDirs } from '../scripts/pack-io.mjs';
+import { readPackDir, readCatalog, listPackDirs, readSchemas } from '../scripts/pack-io.mjs';
 
 const mod = (id, extra = {}) => ({ id, version: '1.0.0', ...extra });
 const code = (fn) => { try { fn(); } catch (e) { return e.code; } return null; };
@@ -255,19 +255,20 @@ test('旗標：parseOverrides / resolveEnabled', () => {
 
 // ---------- 世界包 ----------
 const clone = (x) => JSON.parse(JSON.stringify(x));
-let basePack, catalog;
+let basePack, catalog, schemas;
 test('世界包：範例通過驗證', async () => {
   catalog = await readCatalog();
+  schemas = await readSchemas();
   const dirs = await listPackDirs();
   assert.ok(dirs.length >= 1);
   for (const d of dirs) {
-    const r = validatePack(await readPackDir(d), catalog);
+    const r = validatePack(await readPackDir(d), catalog, schemas);
     assert.deepEqual(r.errors, [], d);
   }
   basePack = await readPackDir(dirs[0]);
 });
 
-const hasErr = (data, re) => validatePack(data, catalog).errors.some((e) => re.test(e.message));
+const hasErr = (data, re) => validatePack(data, catalog, schemas).errors.some((e) => re.test(e.message));
 
 test('世界包：能抓到壞參照', () => {
   const d = clone(basePack);

@@ -4,3 +4,5 @@ export { CommandRegistry } from './commands.js';
 export { FrameworkError } from './errors.js';
 export { parseOverrides, resolveEnabled } from './flags.js';
 export { PACK_FILES, loadPack, validatePack } from './worldpack.js';
+export { SAFE_PRESENTATIONS, CORE_FILES, schemaFiles } from './worldpack.js';
+export { defaultTextFilter } from './textfilter.js';

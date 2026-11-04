@@ -14,7 +14,7 @@
 ## 指令
 ```
 npm run dev     # 本機開發伺服器（無需建置）
-npm test        # 核心單元測試（21 項）
+npm test        # 單元測試
 npm run check   # 世界包驗證 + 架構邊界檢查
 ```
 需要 Node 22。沒有 API 金鑰也能玩（居民用規則腦）；金鑰只放環境變數，見 `api/decide.js`。
