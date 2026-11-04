@@ -40,10 +40,12 @@
     {
       "id": "gathering",
       "name": "採集",
-      "status": "planned",
+      "status": "implemented",
       "summary": "砍樹、摘果、挖石頭、撿貝殼；資源會隨天數再生。",
       "requires": [],
-      "optional": [],
+      "optional": [
+        "residents"
+      ],
       "conflicts": [],
       "needsData": [
         "items",
