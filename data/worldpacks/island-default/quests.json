@@ -302,6 +302,53 @@
       "rewards": {
         "points": 15
       }
+    },
+    {
+      "id": "first_fish",
+      "line": "main",
+      "title": "池塘的朋友",
+      "description": "拿著釣竿到池塘邊，釣一條鯉魚。",
+      "giver": "ashi",
+      "requires": [
+        "welcome"
+      ],
+      "module": "capture",
+      "conditions": [
+        {
+          "type": "event",
+          "event": "capture:caught",
+          "match": {
+            "species": "carp"
+          },
+          "count": 1,
+          "label": "釣到 1 條鯉魚"
+        }
+      ],
+      "rewards": {
+        "points": 10
+      }
+    },
+    {
+      "id": "dex_three",
+      "line": "side",
+      "title": "小小生物學家",
+      "description": "在圖鑑裡記錄 3 種不同的生物（抓了放回、拍照也算）。",
+      "giver": "ashi",
+      "requires": [
+        "first_fish"
+      ],
+      "module": "capture",
+      "conditions": [
+        {
+          "type": "event",
+          "event": "capture:discovered",
+          "count": 3,
+          "label": "圖鑑發現 3 種"
+        }
+      ],
+      "rewards": {
+        "points": 15
+      }
     }
   ]
 }

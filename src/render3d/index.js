@@ -203,6 +203,38 @@ function makeTable() {
   return g;
 }
 
+// 生物（捕捉模組）：可愛、不寫實
+function makeFishSpot() {
+  const g = new THREE.Group();
+  const ring = new THREE.Mesh(new THREE.RingGeometry(0.5, 0.75, 24), new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.6, depthWrite: false }));
+  ring.rotation.x = -Math.PI / 2; ring.position.y = -0.3; g.add(ring);
+  const shadow = new THREE.Mesh(new THREE.CircleGeometry(0.35, 16), new THREE.MeshBasicMaterial({ color: 0x24465f, transparent: true, opacity: 0.45, depthWrite: false }));
+  shadow.rotation.x = -Math.PI / 2; shadow.position.y = -0.31; shadow.scale.set(1.6, 0.8, 1); g.add(shadow);
+  g.userData.ring = ring;
+  return g;
+}
+function makeBug(flying) {
+  const g = new THREE.Group();
+  if (flying) {
+    const wing = std(0xf2a541, 0.6);
+    for (const s of [-1, 1]) { const w = new THREE.Mesh(new THREE.CircleGeometry(0.35, 12), wing); w.position.set(s * 0.3, 1.4, 0); w.rotation.y = s * 0.6; w.material.side = THREE.DoubleSide; g.add(w); }
+    const body = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.05, 0.45, 6), std(0x333333)); body.rotation.x = Math.PI / 2; body.position.y = 1.4; g.add(body);
+    g.userData.flap = g.children.slice(0, 2);
+  } else {
+    const body = new THREE.Mesh(new THREE.SphereGeometry(0.3, 10, 8), std(0x3b2b1a, 0.4)); body.scale.set(1, 0.6, 1.3); body.position.y = 0.2; g.add(body);
+  }
+  g.traverse((o) => { if (o.isMesh) o.castShadow = true; });
+  return g;
+}
+function makeSmallAnimal() {
+  const g = new THREE.Group(), fur = std(0xf4efe6);
+  const body = new THREE.Mesh(new THREE.SphereGeometry(0.5, 12, 10), fur); body.scale.set(1, 0.85, 1.2); body.position.y = 0.45; g.add(body);
+  const head = new THREE.Mesh(new THREE.SphereGeometry(0.32, 12, 10), fur); head.position.set(0, 0.85, 0.5); g.add(head);
+  for (const s of [-1, 1]) { const ear = new THREE.Mesh(new THREE.CapsuleGeometry(0.07, 0.35, 4, 8), std(0xf2d5d5)); ear.position.set(s * 0.12, 1.25, 0.45); g.add(ear); }
+  g.traverse((o) => { if (o.isMesh) o.castShadow = true; });
+  return g;
+}
+
 function makeUnknown() {
   const g = new THREE.Group();
   const m = new THREE.Mesh(new THREE.SphereGeometry(0.4, 8, 6), std(0x888888)); m.position.y = 0.4; g.add(m);
@@ -340,6 +372,10 @@ export async function createRenderer3D(canvas, { data, services, lowPower = fals
       case 'shell': rec.part = makeShell(); break;
       case 'plot': rec.part = makePlot(); break;
       case 'station': rec.part = makeStation(); break;
+      case 'fish': rec.part = makeFishSpot(); rec.pulse = false; break;
+      case 'bug': rec.part = makeBug(false); break;
+      case 'bug_flying': rec.part = makeBug(true); break;
+      case 'animal_small': rec.part = makeSmallAnimal(); break;
       case 'fence': rec.part = makeFence(); break;
       case 'chair': rec.part = makeChair(); break;
       case 'table': rec.part = makeTable(); break;
@@ -489,6 +525,8 @@ export async function createRenderer3D(canvas, { data, services, lowPower = fals
         rec.part.userData.walls.scale.y = wallH; rec.part.userData.walls.position.y = wallH / 2;
       }
       if (rec.pulse) rec.part.scale.setScalar(1 + 0.12 * Math.sin(clock.t * 6));
+      if (rec.part?.userData.ring) rec.part.userData.ring.scale.setScalar(1 + 0.25 * Math.sin(clock.t * 3 + px)); // 水面的漣漪
+      if (rec.part?.userData.flap) rec.part.userData.flap.forEach((w, i) => { w.rotation.y = (i ? 1 : -1) * (0.3 + 0.5 * Math.abs(Math.sin(clock.t * 10))); });
       fit(rec.label); fit(rec.bubble);
     }
 
