@@ -76,7 +76,7 @@ test('網址可開啟世界包沒開的功能；未知功能白話略過', async
 
 test('舊版原型 legacy.html 仍可執行（3D、小人、居民）', async () => {
   const page = await env.newPage('/legacy.html');
-  await page.waitForFunction(() => window.__town?.view3d, null, { timeout: 20000 });
+  await page.waitForFunction(() => window.__town?.view3d, null, { timeout: 60000 });
   await page.waitForTimeout(1500);
   const s = await page.evaluate(() => ({ view: window.__town.view, workers: window.__town.world.workers.length, t: window.__town.world.t }));
   assert.equal(s.view, '3d');

@@ -48,6 +48,26 @@ const PRESETS = {
     for (let i = -1; i <= 1; i++) { g.beginPath(); g.moveTo(cx - t * 0.4, cy + i * t * 0.25); g.lineTo(cx + t * 0.4, cy + i * t * 0.25); g.stroke(); }
   },
 };
+// 原型小鎮（crowd 模組）用的造型
+Object.assign(PRESETS, {
+  tree: (g, cx, cy, t, e) => PRESETS.tree_pine(g, cx, cy, t, e),
+  bush: (g, cx, cy, t, e) => PRESETS.bush_berry(g, cx, cy, t, e),
+  depot(g, cx, cy, t) {
+    g.fillStyle = '#d8c7a3'; circle(g, cx, cy, t * 0.9);
+    g.fillStyle = '#6b5b3a'; g.font = `${Math.max(11, t * 0.45)}px ${FONT}`; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('倉庫', cx, cy);
+  },
+  house(g, cx, cy, t, e) { PRESETS.home(g, cx, cy, t * 0.8, { state: { roof: ['#c0583a', '#4f7cb8', '#8a5a3b', '#5e8f4e'][(e.state?.index ?? 0) % 4] } }); },
+  site(g, cx, cy, t, e) {
+    const k = (e.state?.progress ?? 0) / (e.state?.need || 1);
+    g.strokeStyle = '#4a7fd0'; g.setLineDash([4, 3]); g.lineWidth = 1.5; g.strokeRect(cx - t * 0.45, cy - t * 0.36, t * 0.9, t * 0.72); g.setLineDash([]);
+    g.fillStyle = 'rgba(74,127,208,.35)'; g.fillRect(cx - t * 0.45, cy + t * 0.36 - t * 0.72 * k, t * 0.9, t * 0.72 * k);
+  },
+  worker(g, cx, cy, t, e) {
+    g.fillStyle = e.state?.tint || '#9a9a9a'; circle(g, cx, cy, t * 0.18);
+    if (e.state?.carry) { g.fillStyle = '#222'; g.fillRect(cx - t * 0.08, cy - t * 0.38, t * 0.16, t * 0.16); }
+  },
+});
+
 const KIND_PRESET = { tree: 'tree_pine', bush: 'bush_berry', rock: 'rock', forage: 'shell', home: 'home', station: 'station', plot: 'plot' };
 
 function circle(g, x, y, r) { g.beginPath(); g.arc(x, y, r, 0, Math.PI * 2); g.fill(); }
@@ -110,8 +130,10 @@ export function createRenderer2D(canvas, { data, services }) {
       return;
     }
     const p = PRESETS[presetOf(e)];
-    if (p) p(g, cx, cy, t, e);
-    else { g.fillStyle = '#777'; circle(g, cx, cy, t * 0.15); }
+    const k = e.state?.max ? 0.4 + 0.6 * (e.state.left / e.state.max) : 1; // 資源越少畫越小
+    if (p) {
+      if (k !== 1) { g.save(); g.translate(cx, cy); g.scale(k, k); p(g, 0, 0, t, e); g.restore(); } else p(g, cx, cy, t, e);
+    } else { g.fillStyle = '#777'; circle(g, cx, cy, t * 0.15); }
   }
 
   function render() {
