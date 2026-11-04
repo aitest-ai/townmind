@@ -6,6 +6,7 @@
 //   maxSpeed（number）：學生能選的最高時間倍率
 //   playerTyping（bool）：玩家能不能打字（公告等 userText 參數）；關掉時一律拒絕並說明
 //   typingReason（string）：關掉打字時給學生看的原因
+//   playerMovement（bool）：外殼要不要移動玩家（競速時由模組自己控制，就關掉）
 //   playerSaveControl（bool）：學生能不能匯入存檔、讀取備份、開新遊戲
 // 同一個規則被多個模組設定時，以「最嚴格」為準（bool 取 false、數字取最小）。
 

@@ -112,6 +112,17 @@ export function log(text) {
   for (const line of logLines.slice(-30).reverse()) box.append(el('div', '', line));
 }
 
+// ---------- 回饋小字（成功、完成、解鎖……），浮在畫面上方一下就消失 ----------
+const FB_ICON = { success: '✨', fail: '💦', complete: '🎉', unlock: '🔓', progress: '…' };
+export function floatText(text, kind = 'success') {
+  const box = document.getElementById('feedback');
+  if (!box) return;
+  const t = el('div', `fb fb-${kind}`, `${FB_ICON[kind] || ''} ${text}`);
+  box.append(t);
+  while (box.children.length > 4) box.firstChild.remove();
+  setTimeout(() => t.remove(), 2600);
+}
+
 // ---------- 畫面中央的大訊息（例如「下課囉」） ----------
 export function banner(text, ms = 12000) {
   let b = document.getElementById('banner');

@@ -95,6 +95,7 @@ test('「開新遊戲」真的會開新遊戲，舊存檔留在備份（回歸�
   await env.waitRunning(page);
   await page.evaluate(() => { window.__tm.services.time.skipDays(6); window.__tm.saveNow(); });
   page.on('dialog', (d) => d.accept());
+  await page.click('#settingsBtn');
   await page.click('[data-panel="shell.save"] button:has-text("開新遊戲")');
   await page.waitForFunction(() => window.__tm?.status === 'running' && window.__tm.isNew === true && window.__tm.services.time.day === 1, null, { timeout: 20000 });
   const backupDay = await page.evaluate((key) => JSON.parse(localStorage.getItem(`${key}:backup`)).meta.gameDay, KEY);
