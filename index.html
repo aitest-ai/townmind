@@ -22,6 +22,8 @@
   #stage canvas { position:absolute; inset:0; width:100%; height:100%; display:block; }
   #hud { position:absolute; left:10px; right:10px; bottom:10px; display:flex; gap:8px; justify-content:center; flex-wrap:wrap; pointer-events:none; }
   #hud > * { pointer-events:auto; }
+  button.big { min-height:52px; font-size:17px; padding:8px 18px; border-radius:14px; box-shadow:0 3px 10px rgba(0,0,0,.15); }
+  #help { position:absolute; left:10px; top:10px; background:rgba(255,255,255,.85); border-radius:10px; padding:4px 10px; font-size:13px; color:#445; pointer-events:none; }
   .panel { background:var(--card); border:1px solid var(--line); border-radius:12px; padding:10px 12px; margin-bottom:10px; }
   .panel h2 { margin:0 0 6px; font-size:15px; }
   .p-text { margin:4px 0; color:#444; }
@@ -64,6 +66,7 @@
       <div id="loading">小島準備中…</div>
       <canvas id="view2d" style="display:none"></canvas>
       <canvas id="view3d" style="display:none; cursor:grab"></canvas>
+      <div id="help">點地面走過去，或用方向鍵／WASD。走近居民就能打招呼（空白鍵）。</div>
       <div id="hud"></div>
     </div>
     <div class="panel" style="margin-top:10px">

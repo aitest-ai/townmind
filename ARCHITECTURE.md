@@ -98,5 +98,10 @@ id 格式與唯一、參照完整、地圖尺寸與出生點、模組依賴與�
 - 渲染層（`src/render2d`、`src/render3d`）只讀核心實體與世界包。
 - WP0a：原型的小鎮包成 `prototype-town` 世界包＋crowd／residents 模組，和 legacy 截圖比對。WP0b：換成島嶼地圖，用新截圖當基準。
 
+## 9.1 玩家與互動（外殼，`src/shell/player.js`、`input.js`）
+- 玩家是核心實體 `player`（owner 為 core，位置隨 `core.entities` 存檔）。鍵盤方向鍵／WASD 或在畫面上點一下（平板）走過去；不能走進 `walkable: false` 的地形，撞到時沿岸邊滑動。移動用真實時間，時間暫停時仍可走動。
+- 走近（2.2 格內）有互動的實體，畫面下方出現大按鈕（`engine.interactionsFor`）；不能做時按鈕上直接寫原因。空白鍵／E 執行第一個可用的互動。
+- `island.json` 的 `look`：`camera: 'overview'` 看整張地圖（原型小鎮），預設鏡頭跟著玩家；`outside: 'forest'` 外圍畫森林，否則是海；`flowers: false` 不畫小花。
+
 ## 10. 留給實作者判斷的事
 實體資料結構、services 的細節 API、UI 外殼樣式、群體小人的效能方案（instancing／VAT）、LLM 批次生成的 prompt 設計、地圖編輯方式。覺得契約不合理，請先提出意見。

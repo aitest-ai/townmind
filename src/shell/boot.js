@@ -9,6 +9,8 @@
 import { Engine, FrameworkError, validatePack, loadPack, parseOverrides, resolveEnabled, createCoreServices } from '../core/index.js';
 import { createStorage } from './storage.js';
 import { createPanelHost, toast, log, showFatal } from './ui.js';
+import { createPlayerController } from './player.js';
+import { attachInput } from './input.js';
 
 const $ = (id) => document.getElementById(id);
 const params = new URLSearchParams(location.search);
@@ -169,12 +171,13 @@ async function boot() {
   const { createRenderer2D } = await import('../render2d/index.js');
   const views = { '2d': createRenderer2D($('view2d'), { data, services }), '3d': null };
   const lowPower = params.get('lowpower') === '1' || (navigator.hardwareConcurrency || 8) <= 4;
+  const follow = data.island.look?.camera === 'overview' ? null : 'player';
   let current = '2d';
   const setView = async (name) => {
     if (name === '3d' && !views['3d']) {
       try {
         const { createRenderer3D } = await import('../render3d/index.js');
-        views['3d'] = await createRenderer3D($('view3d'), { data, services, lowPower });
+        views['3d'] = await createRenderer3D($('view3d'), { data, services, lowPower, follow });
       } catch (e) {
         log(`⚠ 3D 畫面無法啟動（${e.message || e}），已改用 2D。可能是這台裝置不支援 WebGL。`);
         name = '2d';
@@ -270,12 +273,53 @@ async function boot() {
   // 模組錯誤 → 事件紀錄（白話）；指令被拒 → 不吵，按鈕旁已有原因
   engine.events.on('core:dayStarted', (d) => { if (!d.offline) log(`🌅 第 ${d.day} 天開始了`); });
 
+  // 9.5 玩家操控與「互動」按鈕（只靠 engine.interactionsFor，新模組不必改這裡）
+  const player = createPlayerController({ entities, island: data.island });
+  const REACH = 2.2;
+  let hudKey = '', hudItems = [];
+  const nearbyInteractions = () => {
+    const p = entities.get('player');
+    if (!p) return [];
+    const out = [];
+    for (const e of entities.near(p.x, p.y, REACH, { filter: (x) => x.id !== 'player' })) {
+      for (const it of engine.interactionsFor(e.id)) out.push({ ...it, entity: e.id });
+      if (out.length >= 4) break;
+    }
+    return out.slice(0, 4);
+  };
+  const runInteraction = (it) => {
+    const r = engine.runCommand(it.command, it.args);
+    if (!r.ok) toast(r.reason || r.error, 'warn');
+    hudKey = ''; refreshPanels(true);
+  };
+  const refreshHud = () => {
+    hudItems = nearbyInteractions();
+    const key = JSON.stringify(hudItems.map((x) => [x.label, x.ok, x.reason]));
+    if (key === hudKey) return;
+    hudKey = key;
+    const hud = $('hud'); hud.textContent = '';
+    for (const it of hudItems) {
+      const b = document.createElement('button');
+      b.className = it.ok ? 'primary big' : 'big';
+      b.textContent = it.ok ? it.label : `${it.label}（${it.reason}）`;
+      b.onclick = () => runInteraction(it);
+      hud.append(b);
+    }
+  };
+  attachInput({
+    stage: $('stage'), player,
+    toWorld: (x, y) => views[current].toWorld(x, y),
+    onInteract: () => { const it = hudItems.find((x) => x.ok); if (it) runInteraction(it); },
+  });
+
   // 10. 主迴圈
-  let last = performance.now();
+  let last = performance.now(), lastHud = 0;
   const frame = (now) => {
     const dt = Math.min(0.1, (now - last) / 1000); last = now;
     let rem = time.advance(dt);
     while (rem > 0) { const s = Math.min(rem, 0.25); engine.update(s); rem -= s; }
+    player.update(dt);
+    if (now - lastHud > 200) { lastHud = now; refreshHud(); }
     try { views[current].render(dt); } catch (e) { debug.errors.push(e.message); }
     refreshPanels();
     if (time.elapsed - lastSave > AUTOSAVE_SEC) saveNow();
@@ -285,7 +329,7 @@ async function boot() {
   requestAnimationFrame(frame);
 
   Object.assign(debug, {
-    status: 'running', engine, services, data, views, get view() { return current; }, setView, storage, notices, saveNow, isNew,
+    status: 'running', engine, services, data, views, player, hud: () => hudItems, get view() { return current; }, setView, storage, notices, saveNow, isNew,
     snapshot: () => ({ day: time.day, minute: Math.round(time.minuteOfDay), modules: engine.enabledModules(), entities: entities.all().length, bag: inventory.list('player') }),
   });
 }

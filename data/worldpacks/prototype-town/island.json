@@ -6,7 +6,8 @@
   "tileSize": 1,
   "look": {
     "outside": "forest",
-    "flowers": true
+    "flowers": true,
+    "camera": "overview"
   },
   "legend": {
     ".": {
