@@ -5,7 +5,9 @@
 //   - 限制：透過外殼提供的 ctx.services.policy 設定（學生能不能調速度、最高倍率、能不能打字、能不能開新遊戲／匯入存檔）
 //     模組關掉時，外殼會自動清掉它設定的限制
 //   - 上課計時用真實時間（ctx.services.now），遊戲暫停時也照走（外殼暫停時仍以 dt=0 呼叫系統）
-// 老師密碼在世界包 pack.json 的 modules.classroom.config.teacherPin（預設 0000，請記得改）。
+// 老師密碼：沒有預設值。老師第一次打開「老師控制台」時自己設定（4～8 位數字），
+// 存在外殼的 prefs（和存檔分開，學生按「開新遊戲」不會清掉）。只存雜湊值，不存密碼本身。
+// 學校想統一密碼、或老師忘記密碼時：在 pack.json 的 modules.classroom.config.teacherPin 填一組，就會改用那組。
 const MIN = 60 * 1000;
 
 export default {
@@ -16,7 +18,7 @@ export default {
   conflicts: [],
   emits: ['classroom:lessonStarted', 'classroom:lessonWarning', 'classroom:lessonEnded', 'classroom:settingsChanged'],
   config: {
-    dayLengthMinutes: 12, teacherPin: '0000', lessonMinutes: 40, warnMinutes: 5,
+    dayLengthMinutes: 12, teacherPin: '', lessonMinutes: 40, warnMinutes: 5,
     autoLockMinutes: 15, maxStudentSpeed: 4, studentTime: true, typing: true, studentSaveControl: true,
   },
 
@@ -31,6 +33,15 @@ export default {
       lesson: null, // { endsAt, minutes, warned }
     };
     let unlockedUntil = 0, wrong = 0, blockedUntil = 0;
+    // 密碼：世界包指定的優先；否則用老師自己設定的（prefs）。只比較雜湊值。
+    const memPrefs = new Map();
+    const prefs = ctx.services.prefs ?? { get: (k, d = null) => (memPrefs.has(k) ? memPrefs.get(k) : d), set: (k, v) => memPrefs.set(k, v) };
+    const salt = ctx.data.pack?.id ?? 'townmind';
+    const hash = (pin) => { let h = 0x811c9dc5; for (const ch of `${salt}:${pin}`) { h ^= ch.charCodeAt(0); h = Math.imul(h, 16777619) >>> 0; } return h.toString(16).padStart(8, '0'); };
+    const packPin = String(cfg.teacherPin ?? '').trim();
+    const pinIsSet = () => !!packPin || !!prefs.get('classroom.pinHash');
+    const pinMatches = (pin) => (packPin ? String(pin).trim() === packPin : hash(String(pin).trim()) === prefs.get('classroom.pinHash'));
+    const weakPin = (pin) => /^(\d)\1+$/.test(pin) || '0123456789'.includes(pin) || '9876543210'.includes(pin);
 
     function apply() {
       time?.setDayLength(st.dayLengthMinutes * 60);
@@ -78,17 +89,38 @@ export default {
       id: 'classroom.unlock', label: '解鎖老師控制台', description: '輸入老師密碼',
       params: { pin: { type: 'string', maxLen: 12 } },
       canRun: ({ pin }) => {
+        if (!pinIsSet()) return '還沒有設定老師密碼，請先設定';
         if (now() < blockedUntil) return `密碼錯太多次了，請 ${Math.ceil((blockedUntil - now()) / 1000)} 秒後再試`;
-        return String(pin).trim() === String(cfg.teacherPin) ? true : '密碼不對';
+        return pinMatches(pin) ? true : '密碼不對';
       },
       run() { wrong = 0; unlockedUntil = now() + cfg.autoLockMinutes * MIN; notify('🔓 老師控制台已解鎖'); return true; },
     });
     // 密碼錯誤次數：用 core:commandRun 監聽被拒的 unlock
     ctx.on('core:commandRun', (x) => {
-      if (x.id === 'classroom.unlock' && !x.ok && x.code === 'REFUSED' && now() >= blockedUntil) {
+      if (x.id === 'classroom.unlock' && !x.ok && x.code === 'REFUSED' && pinIsSet() && now() >= blockedUntil) {
         wrong++;
         if (wrong >= 5) { wrong = 0; blockedUntil = now() + MIN; }
       }
+    });
+    // 設定（或更改）老師密碼：第一次使用時任何人都能設定；之後要先解鎖才能改。世界包指定密碼時不能在這裡改。
+    ctx.registerCommand({
+      id: 'classroom.setPin', label: '設定老師密碼', description: '設定 4～8 位數字的老師密碼',
+      params: { pin: { type: 'string', maxLen: 8 }, confirm: { type: 'string', maxLen: 8 } },
+      available: () => (packPin ? '密碼由世界包設定，請改 pack.json' : (!pinIsSet() || unlocked()) ? true : '請先輸入老師密碼'),
+      canRun: ({ pin, confirm }) => {
+        const p = pin.trim();
+        if (!/^\d{4,8}$/.test(p)) return '密碼要是 4～8 位數字';
+        if (weakPin(p)) return '這組密碼太容易被猜到了（例如 0000、1234），換一組吧';
+        if (p !== confirm.trim()) return '兩次輸入的密碼不一樣';
+        return true;
+      },
+      run({ pin }) {
+        const first = !pinIsSet();
+        prefs.set('classroom.pinHash', hash(pin.trim()));
+        unlockedUntil = now() + cfg.autoLockMinutes * MIN;
+        notify(first ? '🔐 老師密碼設定好了，控制台已解鎖。請記住這組密碼。' : '🔐 老師密碼已更改');
+        return true;
+      },
     });
     cmd('lock', '鎖上控制台', {}, () => { unlockedUntil = 0; notify('🔒 老師控制台已鎖上'); return true; });
     cmd('setSpeed', '設定時間速度', { speed: { type: 'int', min: 0, max: 8, clamp: true } }, ({ speed }) => {
@@ -129,6 +161,14 @@ export default {
     ctx.registerPanel({
       id: 'classroom.teacher', title: '老師控制台', order: 980,
       view() {
+        if (!pinIsSet()) {
+          return [
+            { type: 'text', text: '第一次使用：請老師設定一組 4～8 位數字的密碼（不要用 0000、1234 這類容易猜的）。設定後學生就不能改課堂設定。' },
+            { type: 'input', name: 'newPin', label: '新密碼', maxLen: 8 },
+            { type: 'input', name: 'newPin2', label: '再輸入一次', maxLen: 8 },
+            { type: 'button', label: '設定老師密碼', command: 'classroom.setPin', argsFrom: { pin: 'newPin', confirm: 'newPin2' }, primary: true },
+          ];
+        }
         if (!unlocked()) {
           return [
             { type: 'text', text: '這裡是給老師用的設定。' },
@@ -153,6 +193,11 @@ export default {
           yesNo('classroom.setStudentTime', '學生調時間', st.studentTime),
           yesNo('classroom.setTyping', '學生打字', st.typing),
           yesNo('classroom.setSaveControl', '學生開新遊戲／匯入', st.studentSaveControl),
+          ...(packPin ? [] : [
+            { type: 'input', name: 'chgPin', label: '更改老師密碼', maxLen: 8 },
+            { type: 'input', name: 'chgPin2', label: '再輸入一次', maxLen: 8 },
+            { type: 'button', label: '更改密碼', command: 'classroom.setPin', argsFrom: { pin: 'chgPin', confirm: 'chgPin2' } },
+          ]),
           { type: 'button', label: '鎖上控制台', command: 'classroom.lock' },
         ];
       },

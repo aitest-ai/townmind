@@ -154,7 +154,7 @@ export default {
       },
     });
     ctx.registerEntityKind('resident', { label: '居民', interactions: [{ label: (e) => `和${e.label}打招呼`, command: 'residents.greet', args: (e) => ({ who: e.ref }) }] });
-    ctx.registerEntityKind('home', { label: '居民的家' });
+    ctx.registerEntityKind('home', { label: '居民的家', solid: true, radius: 0.55 }); // 房子擋路；居民本身不擋
 
     ctx.registerCommand({
       id: 'residents.announce', label: '發公告', description: '對全島居民說一句話，會影響他們接下來的想法',

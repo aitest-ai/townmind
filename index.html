@@ -23,6 +23,8 @@
   #hud { position:absolute; left:10px; right:10px; bottom:10px; display:flex; gap:8px; justify-content:center; flex-wrap:wrap; pointer-events:none; }
   #hud > * { pointer-events:auto; }
   button.big { min-height:52px; font-size:17px; padding:8px 18px; border-radius:14px; box-shadow:0 3px 10px rgba(0,0,0,.15); }
+  .joystick { position:absolute; left:18px; bottom:18px; width:132px; height:132px; border-radius:50%; background:rgba(255,255,255,.35); border:3px solid rgba(255,255,255,.8); touch-action:none; z-index:3; box-shadow:0 2px 10px rgba(0,0,0,.12); }
+  .joystick .knob { position:absolute; left:50%; top:50%; width:58px; height:58px; margin:-29px 0 0 -29px; border-radius:50%; background:rgba(63,120,201,.85); border:3px solid #fff; pointer-events:none; transition:transform .06s; }
   #help { position:absolute; left:10px; top:10px; background:rgba(255,255,255,.85); border-radius:10px; padding:4px 10px; font-size:13px; color:#445; pointer-events:none; }
   .panel { background:var(--card); border:1px solid var(--line); border-radius:12px; padding:10px 12px; margin-bottom:10px; }
   .panel h2 { margin:0 0 6px; font-size:15px; }
@@ -68,7 +70,7 @@
       <div id="loading">小島準備中…</div>
       <canvas id="view2d" style="display:none"></canvas>
       <canvas id="view3d" style="display:none; cursor:grab"></canvas>
-      <div id="help">點地面走過去，或用方向鍵／WASD。走近居民就能打招呼（空白鍵）。</div>
+      <div id="help">點地面走過去（會自己繞路），或用搖桿、方向鍵／WASD。走近居民或樹就能互動（空白鍵）。</div>
       <div id="hud"></div>
     </div>
     <div class="panel" style="margin-top:10px">

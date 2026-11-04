@@ -62,6 +62,10 @@ Object.assign(PRESETS, {
     g.strokeStyle = '#4a7fd0'; g.setLineDash([4, 3]); g.lineWidth = 1.5; g.strokeRect(cx - t * 0.45, cy - t * 0.36, t * 0.9, t * 0.72); g.setLineDash([]);
     g.fillStyle = 'rgba(74,127,208,.35)'; g.fillRect(cx - t * 0.45, cy + t * 0.36 - t * 0.72 * k, t * 0.9, t * 0.72 * k);
   },
+  marker(g, cx, cy, t) {
+    g.strokeStyle = 'rgba(255,255,255,.95)'; g.lineWidth = Math.max(2, t * 0.08);
+    g.beginPath(); g.ellipse(cx, cy + t * 0.15, t * 0.32, t * 0.18, 0, 0, Math.PI * 2); g.stroke();
+  },
   worker(g, cx, cy, t, e) {
     g.fillStyle = e.state?.tint || '#9a9a9a'; circle(g, cx, cy, t * 0.18);
     if (e.state?.carry) { g.fillStyle = '#222'; g.fillRect(cx - t * 0.08, cy - t * 0.38, t * 0.16, t * 0.16); }
@@ -151,5 +155,11 @@ export function createRenderer2D(canvas, { data, services }) {
     return { x: (px - ox) / t - 0.5, y: (py - oy) / t - 0.5 };
   }
 
-  return { name: '2d', render, toWorld, resize, dispose() {} };
+  // 格子座標 → 螢幕座標（toWorld 的反向，測試與提示用）
+  function toScreen(x, y) {
+    const r = canvas.getBoundingClientRect();
+    return { x: r.left + (ox + (x + 0.5) * t) / dpr, y: r.top + (oy + (y + 0.5) * t) / dpr };
+  }
+
+  return { name: '2d', render, toWorld, toScreen, resize, dispose() {} };
 }

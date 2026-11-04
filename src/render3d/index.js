@@ -210,7 +210,9 @@ export async function createRenderer3D(canvas, { data, services, lowPower = fals
   const span = Math.max(W, H) * TILE;
   const camera = new THREE.PerspectiveCamera(42, 4 / 3, 0.5, 400);
   // follow：鏡頭跟著某個實體（通常是玩家），否則看整張地圖
-  const followEnt = () => (follow ? entities.get(follow) : null);
+  const followId = follow;
+  follow = followId ? { id: followId, last: null, vel: { x: 0, z: 0 } } : null;
+  const followEnt = () => (follow ? entities.get(follow.id) : null);
   const fe0 = followEnt();
   const CAM_TARGET = fe0 ? new THREE.Vector3(wx(fe0.x), 0, wz(fe0.y)) : new THREE.Vector3(0, 0, 2);
   const CAM_POS = fe0 ? CAM_TARGET.clone().add(new THREE.Vector3(0, 24, 28)) : new THREE.Vector3(0, span * 0.58, span * 0.7);
@@ -323,6 +325,10 @@ export async function createRenderer3D(canvas, { data, services, lowPower = fals
         break;
       }
       case 'site': rec.part = makeSite(); rec.prog = 0; break;
+      case 'marker': {
+        const ring = new THREE.Mesh(new THREE.RingGeometry(0.55, 0.8, 28), new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.85, depthWrite: false }));
+        ring.rotation.x = -Math.PI / 2; ring.position.y = 0.06; rec.part = ring; rec.pulse = true; break;
+      }
       case 'depot': {
         rec.part = makeStockpile();
         rec.label = makeTextSprite(); rec.label.userData.set(e.label || '倉庫'); rec.label.position.set(0, 5.3, -2.2); root.add(rec.label);
@@ -380,7 +386,7 @@ export async function createRenderer3D(canvas, { data, services, lowPower = fals
   const fit = (sp) => {
     if (!sp || !sp.visible || !sp.userData.base) return;
     sp.getWorldPosition(tmp);
-    const k = THREE.MathUtils.clamp(camera.position.distanceTo(tmp) / 45, follow ? 0.75 : 0.4, 1.7); // 跟隨鏡頭比較近，名牌不要縮太小
+    const k = THREE.MathUtils.clamp(camera.position.distanceTo(tmp) / 45, followId ? 0.75 : 0.4, 1.7); // 跟隨鏡頭比較近，名牌不要縮太小
     sp.scale.set(sp.userData.base.w * k, sp.userData.base.h * k, 1);
   };
 
@@ -439,14 +445,27 @@ export async function createRenderer3D(canvas, { data, services, lowPower = fals
         const wallH = Math.max(0.02, rec.prog * 2.2);
         rec.part.userData.walls.scale.y = wallH; rec.part.userData.walls.position.y = wallH / 2;
       }
+      if (rec.pulse) rec.part.scale.setScalar(1 + 0.12 * Math.sin(clock.t * 6));
       fit(rec.label); fit(rec.bubble);
     }
 
     const fe = followEnt();
-    if (fe) { // 鏡頭平滑跟隨：目標與相機一起平移，保留玩家自己轉的角度
-      const dx = wx(fe.x) - controls.target.x, dz = wz(fe.y) - controls.target.z, k = Math.min(1, frameDt * 4);
-      controls.target.x += dx * k; controls.target.z += dz * k;
-      camera.position.x += dx * k; camera.position.z += dz * k;
+    if (fe) {
+      // 鏡頭阻尼：目標點＝玩家位置＋往移動方向看前一點（look-ahead），用和幀率無關的指數平滑追過去，
+      // 相機和目標一起平移，保留玩家自己轉的角度與遠近。
+      const px = wx(fe.x), pz = wz(fe.y);
+      if (follow.last) {
+        const k0 = 1 - Math.exp(-frameDt * 6);
+        const vx = frameDt > 0 ? (px - follow.last.x) / frameDt : 0, vz = frameDt > 0 ? (pz - follow.last.z) / frameDt : 0;
+        follow.vel.x += (vx - follow.vel.x) * k0; follow.vel.z += (vz - follow.vel.z) * k0;
+      }
+      follow.last = { x: px, z: pz };
+      const LOOK = 0.35;
+      const tx = px + follow.vel.x * LOOK, tz = pz + follow.vel.z * LOOK;
+      const k = 1 - Math.exp(-frameDt * 4.5);
+      const dx = (tx - controls.target.x) * k, dz = (tz - controls.target.z) * k;
+      controls.target.x += dx; controls.target.z += dz;
+      camera.position.x += dx; camera.position.z += dz;
     }
     controls.update();
     renderer.render(scene, camera);
@@ -456,6 +475,8 @@ export async function createRenderer3D(canvas, { data, services, lowPower = fals
     name: '3d',
     render,
     resize,
+    // 鏡頭的水平角度（弧度），外殼用來把「往畫面上方推」換算成地圖方向
+    azimuth: () => controls.getAzimuthalAngle(),
     resetCamera() {
       const fe = followEnt();
       if (fe) { controls.target.set(wx(fe.x), 0, wz(fe.y)); camera.position.copy(controls.target).add(new THREE.Vector3(0, 24, 28)); }

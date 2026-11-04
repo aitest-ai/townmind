@@ -104,10 +104,15 @@ id 格式與唯一、參照完整、地圖尺寸與出生點、模組依賴與�
 - 渲染層（`src/render2d`、`src/render3d`）只讀核心實體與世界包。
 - WP0a：原型的小鎮包成 `prototype-town` 世界包＋crowd／residents 模組，和 legacy 截圖比對。WP0b：換成島嶼地圖，用新截圖當基準。
 
-## 9.1 玩家與互動（外殼，`src/shell/player.js`、`input.js`）
-- 玩家是核心實體 `player`（owner 為 core，位置隨 `core.entities` 存檔）。鍵盤方向鍵／WASD 或在畫面上點一下（平板）走過去；不能走進 `walkable: false` 的地形，撞到時沿岸邊滑動。移動用真實時間，時間暫停時仍可走動。
+## 9.1 玩家與互動（外殼，`src/shell/player.js`、`pathfind.js`、`input.js`）
+- 玩家是核心實體 `player`（owner 為 core，位置隨 `core.entities` 存檔）。
+- 操作：方向鍵／WASD、觸控搖桿（觸控裝置自動顯示；`?joystick=1` 強制顯示、`?joystick=0` 隱藏，推一點點走慢一點）、在畫面上點一下（A* 尋路繞過水池與擋路的東西，路徑拉直；目的地顯示小圈圈）。
+- 方向是「螢幕方向」：3D 轉了鏡頭之後，往上推還是往鏡頭前方走。
+- 碰撞：不能走進 `walkable: false` 的地形；模組用 `registerEntityKind(kind, { solid: true, radius })` 宣告擋路的東西（目前：樹、灌木、石頭、居民的家）。撞牆沿牆滑行、撞到圓形的東西沿切線繞開、牆角自動往旁邊擠。
+- 手感：平滑加速與減速；用真實經過的時間移動（平板掉幀也不會變慢，切成小步避免穿過東西）；時間暫停時仍可走動。
+- 鏡頭（3D）：預設跟著玩家，指數平滑（和幀率無關）＋往移動方向看前一點；`island.json` 的 `look.camera: 'overview'` 改看整張地圖。
 - 走近（2.2 格內）有互動的實體，畫面下方出現大按鈕（`engine.interactionsFor`）；不能做時按鈕上直接寫原因。空白鍵／E 執行第一個可用的互動。
-- `island.json` 的 `look`：`camera: 'overview'` 看整張地圖（原型小鎮），預設鏡頭跟著玩家；`outside: 'forest'` 外圍畫森林，否則是海；`flowers: false` 不畫小花。
+- `island.json` 的 `look`：`outside: 'forest'` 外圍畫森林，否則是海；`flowers: false` 不畫小花。
 
 ## 9.2 外殼提供給模組的服務（不在核心）
 外殼在 `src/shell/boot.js` 建立 Engine 時，除了核心服務，還放入這些服務（模組用 `ctx.services.xxx?.()` 呼叫，沒有外殼時，例如在 Node 測試裡，就不存在）：
@@ -115,6 +120,7 @@ id 格式與唯一、參照完整、地圖尺寸與出生點、模組依賴與�
 - `policy`：模組設定外殼要遵守的限制（`src/shell/policy.js`）：`playerTimeControl`、`maxSpeed`、`playerTyping`、`typingReason`、`playerSaveControl`。多個模組設定時取最嚴格的；模組關掉時自動清掉。
 - `now()`：真實時間（毫秒）。
 - `save()`：立刻存檔。
+- `prefs`：和存檔分開保存的設定（`get`／`set`），開新遊戲與匯入存檔都不會動到（例如老師密碼的雜湊值）。
 遊戲暫停時，外殼仍以 `dt = 0` 每秒呼叫系統幾次，所以「真實時間」的計時（例如上課倒數）不會停。
 
 ## 10. 留給實作者判斷的事
