@@ -8,7 +8,7 @@
 //   ?seed=123              指定亂數種子（測試用）
 import { Engine, FrameworkError, validatePack, loadPack, parseOverrides, resolveEnabled, createCoreServices, defaultTextFilter } from '../core/index.js';
 import { createStorage } from './storage.js';
-import { createPanelHost, toast, log, showFatal, banner } from './ui.js';
+import { createPanelHost, toast, log, showFatal, banner, showDialog } from './ui.js';
 import { createPlayerController } from './player.js';
 import { attachInput } from './input.js';
 import { createPolicy } from './policy.js';
@@ -141,8 +141,10 @@ async function boot() {
 
   // 6. 讀存檔（或開新遊戲）
   let isNew = true;
+  let recovery = null; // 存檔讀不出來時，畫面上讓使用者選怎麼辦
   if (saved.status === 'broken') {
-    notices.push(`存檔壞掉了（${saved.error}），這次先開新遊戲。壞掉的存檔另外保留著，可以用「讀取備份」試試看。`);
+    notices.push(`存檔壞掉了（${saved.error}），這次先開新遊戲。壞掉的存檔另外保留著。`);
+    recovery = { reason: saved.error, broken: true };
   } else if (saved.status === 'ok') {
     try {
       const rep = engine.deserializeAll(saved.blob);
@@ -160,6 +162,7 @@ async function boot() {
     } catch (e) {
       const fe = e instanceof FrameworkError ? e : null;
       notices.push(`沒辦法讀取存檔：${fe ? fe.message : e.message}。${fe?.hint || ''}這次先開新遊戲，舊存檔沒有被刪除。`);
+      recovery = { reason: fe ? fe.message : e.message, broken: false, keepSave: true };
     }
   }
   if (isNew) {
@@ -171,10 +174,12 @@ async function boot() {
 
   // 7. 存檔
   let lastSave = 0;
+  let leaving = false; // 讀備份／匯入／開新遊戲時要重新整理：離開前不可以再自動存檔，否則會蓋掉剛寫好的存檔
   const saveNow = (why = '') => {
+    if (leaving) return false;
     let blob;
     try { blob = engine.serializeAll({ gameDay: time.day }); } catch (e) { toast(`這次沒存到：${e.message}`, 'bad'); return false; }
-    const r = storage.save(SAVE_SLOT, blob);
+    const r = storage.save(SAVE_SLOT, blob, { rotate: !recovery }); // 這次讀檔出過問題：整段遊戲都不動備份，保留給使用者還原
     if (!r.ok) { toast(r.error, 'bad', 8000); return false; }
     lastSave = time.elapsed;
     if (why) log(`💾 ${why}`);
@@ -248,7 +253,8 @@ async function boot() {
     // 先檢查存檔看得懂，再寫進儲存區重新整理（讓引擎從乾淨狀態讀檔）
     if (!blob || ![1, 2].includes(blob.format)) { toast('這個檔案不是存檔（看不懂內容）', 'bad'); return; }
     if (blob.meta?.packId && blob.meta.packId !== data.pack.id) { toast(`這個存檔屬於另一個世界「${blob.meta.packId}」，目前開的是「${data.pack.id}」。`, 'bad', 8000); return; }
-    storage.save(SAVE_SLOT, blob);
+    storage.save(SAVE_SLOT, blob, { rotate: !recovery }); // 匯入時目前的存檔變成備份；讀檔出過問題時不動備份
+    leaving = true;
     const u = new URL(location.href); u.searchParams.delete('new'); location.href = u.href;
   };
   const shellAction = async (action, values) => {
@@ -270,7 +276,7 @@ async function boot() {
       case 'newgame':
         if (policy.get('playerSaveControl', true) && confirm('要開新遊戲嗎？目前的存檔會先存成備份，可以用「讀取備份」找回來。')) {
           saveNow(); const cur = storage.load(SAVE_SLOT); if (cur.status === 'ok') storage.save(`${SAVE_SLOT}:backup`, cur.blob);
-          storage.remove(SAVE_SLOT); const u = new URL(location.href); u.searchParams.delete('new'); location.href = u.href;
+          storage.remove(SAVE_SLOT); leaving = true; const u = new URL(location.href); u.searchParams.delete('new'); location.href = u.href;
         }
         break;
       default: break;
@@ -357,6 +363,24 @@ async function boot() {
   };
   refreshPanels(true);
   requestAnimationFrame(frame);
+
+  // 存檔讀不出來：說明原因，讓使用者選「讀備份／下載壞掉的檔／先玩新遊戲」
+  if (recovery) {
+    if (recovery.keepSave) storage.save(`${SAVE_SLOT}:broken`, saved.blob); // 讀不進來的存檔另外留一份，避免被新遊戲的自動存檔蓋掉
+    const b = storage.loadBackup(SAVE_SLOT);
+    const bInfo = b.status === 'ok' ? `（第 ${b.blob?.meta?.gameDay ?? '?'} 天，${b.blob?.meta?.savedAt ? new Date(b.blob.meta.savedAt).toLocaleString('zh-TW') : '時間不明'}）` : '';
+    showDialog({
+      title: '存檔讀不出來',
+      message: `原因：${recovery.reason}`,
+      hint: b.status === 'ok' ? '可以先試試「讀取備份」，那是再前一次的存檔。' : '沒有可用的備份。可以把壞掉的存檔下載下來交給老師，或先開新遊戲。',
+      actions: [
+        ...(b.status === 'ok' ? [{ label: `讀取備份${bInfo}`, primary: true, run: () => reloadWith(b.blob) }] : []),
+        { label: '下載壞掉的存檔', run: () => storage.exportText(storage.raw(`${SAVE_SLOT}:broken`) ?? '', `壞掉的存檔-${data.pack.id}.json`) },
+        { label: '先玩新遊戲', primary: b.status !== 'ok', run: () => {} },
+      ],
+    });
+    debug.recovery = recovery;
+  }
 
   Object.assign(debug, {
     status: 'running', engine, services, data, views, player, hud: () => hudItems, get view() { return current; }, setView, storage, notices, saveNow, isNew,

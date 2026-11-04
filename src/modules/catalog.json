@@ -8,10 +8,7 @@
       "status": "prototype",
       "summary": "有個性、有記憶、有自己生活的居民。AI 只能從「已啟用模組開放給 AI 的指令」中選擇行動。",
       "requires": [],
-      "optional": [
-        "social",
-        "quests-diary"
-      ],
+      "optional": [],
       "conflicts": [],
       "needsData": [
         "residents"
@@ -177,8 +174,8 @@
     {
       "id": "quests-diary",
       "name": "小請求與居民日記",
-      "status": "planned",
-      "summary": "居民的小請求；離線期間的小鎮日記。",
+      "status": "prototype",
+      "summary": "居民日記（已完成：玩的時候記錄、離線時依模板與種子亂數補寫，不呼叫 AI）；小請求（之後再做）。",
       "requires": [],
       "optional": [
         "residents"
