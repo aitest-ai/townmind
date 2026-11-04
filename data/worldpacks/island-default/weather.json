@@ -1,0 +1,50 @@
+{
+  "_說明": "每天的天氣。seasons 裡的數字是權重（越大越常出現）。waters: true 的天氣會讓田自動澆水。",
+  "types": {
+    "sunny": {
+      "name": "晴天",
+      "icon": "☀️"
+    },
+    "cloudy": {
+      "name": "多雲",
+      "icon": "⛅"
+    },
+    "rain": {
+      "name": "下雨",
+      "icon": "🌧️",
+      "waters": true
+    },
+    "rainbow": {
+      "name": "雨後彩虹",
+      "icon": "🌈"
+    },
+    "snow": {
+      "name": "下雪",
+      "icon": "❄️"
+    }
+  },
+  "seasons": {
+    "spring": {
+      "sunny": 5,
+      "cloudy": 3,
+      "rain": 3,
+      "rainbow": 1
+    },
+    "summer": {
+      "sunny": 7,
+      "cloudy": 2,
+      "rain": 2,
+      "rainbow": 1
+    },
+    "autumn": {
+      "sunny": 5,
+      "cloudy": 4,
+      "rain": 2
+    },
+    "winter": {
+      "sunny": 3,
+      "cloudy": 4,
+      "snow": 3
+    }
+  }
+}

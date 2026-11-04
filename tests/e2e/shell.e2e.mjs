@@ -93,3 +93,10 @@ test('舊版原型 legacy.html 仍可執行（3D、小人、居民）', async ()
   await page.screenshot({ path: join(SHOTS, 'pr3-legacy.png') });
   assert.deepEqual(page.errors.filter((e) => !/WebGL|GPU stall|swiftshader/i.test(e)), []);
 });
+
+test('用網址關掉世界包有開的模組（例如 crafting）：遊戲照樣啟動（回歸測試）', async () => {
+  const page = await env.newPage('/?new=1&view=2d&mods=crafting=off,farming=off,economy=off');
+  await env.waitRunning(page);
+  assert.equal(await page.evaluate(() => window.__tm.status), 'running');
+  assert.equal(await page.evaluate(() => window.__tm.engine.enabledModules().includes('crafting')), false);
+});
