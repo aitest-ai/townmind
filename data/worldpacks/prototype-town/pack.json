@@ -1,0 +1,37 @@
+{
+  "schemaVersion": 1,
+  "id": "prototype-town",
+  "name": "原型小鎮（WP0a 比對用）",
+  "version": "0.1.0",
+  "audience": "children",
+  "locale": "zh-Hant",
+  "note": "把 legacy.html 的原型小鎮搬進框架：同樣的 24 個小人、10 個資源點、5 位居民。用來確認遷移後行為和原型一致。",
+  "time": {
+    "dayLengthSec": 720
+  },
+  "modules": {
+    "residents": {
+      "enabled": true,
+      "config": {
+        "ring": {
+          "x": 15.5,
+          "y": 9.9,
+          "rx": 2.48,
+          "ry": 1.6
+        }
+      }
+    },
+    "crowd": {
+      "enabled": true,
+      "config": {
+        "workers": 24,
+        "seed": 7,
+        "origin": {
+          "x": 16,
+          "y": 10.4
+        }
+      }
+    }
+  },
+  "startingInventory": []
+}

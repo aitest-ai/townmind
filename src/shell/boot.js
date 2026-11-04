@@ -104,7 +104,7 @@ async function boot() {
   const storage = createStorage('townmind');
   const saved = params.get('new') ? { status: 'empty' } : storage.load(SAVE_SLOT);
   const seed = Number(params.get('seed')) || saved.blob?.meta?.seed || (Math.random() * 2 ** 31) >>> 0;
-  const services = createCoreServices(data);
+  const services = { ...createCoreServices(data), notify: (text) => log(String(text).slice(0, 120)) }; // notify：模組的白話訊息 → 事件紀錄
   const engine = new Engine({ data, services, seed, labels, log: (...a) => console.info(...a), onError: (info) => { log(`⚠ ${labels[info.module] || info.module}：${info.message}`); } });
   for (const d of defs) engine.register(d);
   let started;
@@ -164,19 +164,40 @@ async function boot() {
   addEventListener('pagehide', () => saveNow());
   document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') saveNow(); });
 
-  // 8. 畫面
+  let refreshPanels = () => {}; // 面板建好之前先是空的
+  // 8. 畫面：2D 一定可用；3D 預設開啟，裝置不支援時自動退回 2D 並說明
   const { createRenderer2D } = await import('../render2d/index.js');
-  const view = createRenderer2D($('view2d'), { data, services });
+  const views = { '2d': createRenderer2D($('view2d'), { data, services }), '3d': null };
+  const lowPower = params.get('lowpower') === '1' || (navigator.hardwareConcurrency || 8) <= 4;
+  let current = '2d';
+  const setView = async (name) => {
+    if (name === '3d' && !views['3d']) {
+      try {
+        const { createRenderer3D } = await import('../render3d/index.js');
+        views['3d'] = await createRenderer3D($('view3d'), { data, services, lowPower });
+      } catch (e) {
+        log(`⚠ 3D 畫面無法啟動（${e.message || e}），已改用 2D。可能是這台裝置不支援 WebGL。`);
+        name = '2d';
+      }
+    }
+    current = name;
+    $('view2d').style.display = name === '2d' ? 'block' : 'none';
+    $('view3d').style.display = name === '3d' ? 'block' : 'none';
+    refreshPanels(true);
+  };
+  await setView(params.get('view') === '2d' ? '2d' : '3d');
   $('loading').remove();
 
   // 9. 面板：外殼自己的面板 + 模組註冊的宣告式面板
   const host = createPanelHost($('panels'));
-  const SPEEDS = [{ value: '0', label: '暫停' }, { value: '1', label: '正常' }, { value: '2', label: '2 倍' }, { value: '4', label: '4 倍' }];
+  const SPEEDS = [{ value: '0', label: '暫停' }, { value: '1', label: '正常' }, { value: '2', label: '2 倍' }, { value: '4', label: '4 倍' }, { value: '8', label: '8 倍' }];
   const shellPanels = () => [
     { id: 'shell.status', title: '小島狀態', order: 0, nodes: [
       { type: 'stat', label: '時間', value: time.clockText() },
       { type: 'stat', label: '一天的長度', value: `${Math.round(time.dayLengthSec / 60)} 分鐘` },
       { type: 'select', name: 'speed', label: '時間速度', options: SPEEDS, value: String(time.paused ? 0 : time.timeScale), onChange: 'speed' },
+      { type: 'select', name: 'view', label: '畫面', options: [{ value: '3d', label: '3D 立體' }, { value: '2d', label: '2D 俯視' }], value: current, onChange: 'view' },
+      ...(current === '3d' ? [{ type: 'text', text: '鏡頭：拖曳旋轉、兩指或右鍵平移、滾輪或兩指縮放。' }, { type: 'button', label: '重設鏡頭', action: 'camReset' }] : []),
     ] },
     ...engine.listPanels().filter((p) => typeof p.view === 'function').map((p) => ({ id: p.id, title: p.title, order: p.order, nodes: engine.renderPanel(p.id) })),
     { id: 'shell.bag', title: '背包', order: 900, nodes: [
@@ -208,6 +229,8 @@ async function boot() {
   const shellAction = async (action, values) => {
     switch (action) {
       case 'speed': { const k = Number(values.speed); time.pause(k === 0); if (k > 0) time.setTimeScale(k); break; }
+      case 'view': await setView(values.view); break;
+      case 'camReset': views['3d']?.resetCamera(); break;
       case 'save': if (saveNow('已存檔')) toast('已存檔'); break;
       case 'export': { saveNow(); storage.exportFile(engine.serializeAll({ gameDay: time.day }), `小島存檔-${data.pack.id}-第${time.day}天.json`); break; }
       case 'import': try { await reloadWith(await storage.importFile()); } catch (e) { toast(e.message, 'bad'); } break;
@@ -236,7 +259,7 @@ async function boot() {
     refreshPanels(true);
   };
   let lastPanels = 0;
-  const refreshPanels = (force = false) => {
+  refreshPanels = (force = false) => {
     const now = performance.now();
     if (!force && now - lastPanels < 300) return;
     lastPanels = now;
@@ -253,7 +276,7 @@ async function boot() {
     const dt = Math.min(0.1, (now - last) / 1000); last = now;
     let rem = time.advance(dt);
     while (rem > 0) { const s = Math.min(rem, 0.25); engine.update(s); rem -= s; }
-    try { view.render(dt); } catch (e) { debug.errors.push(e.message); }
+    try { views[current].render(dt); } catch (e) { debug.errors.push(e.message); }
     refreshPanels();
     if (time.elapsed - lastSave > AUTOSAVE_SEC) saveNow();
     requestAnimationFrame(frame);
@@ -262,7 +285,7 @@ async function boot() {
   requestAnimationFrame(frame);
 
   Object.assign(debug, {
-    status: 'running', engine, services, data, view, storage, notices, saveNow, isNew,
+    status: 'running', engine, services, data, views, get view() { return current; }, setView, storage, notices, saveNow, isNew,
     snapshot: () => ({ day: time.day, minute: Math.round(time.minuteOfDay), modules: engine.enabledModules(), entities: entities.all().length, bag: inventory.list('player') }),
   });
 }

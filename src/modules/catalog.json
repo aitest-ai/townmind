@@ -5,8 +5,8 @@
     {
       "id": "residents",
       "name": "AI 居民",
-      "status": "planned",
-      "summary": "有個性、有記憶、有自己生活的居民。AI 只能從「已啟用模組開放給 AI 的指令」中選擇行動。（原型程式在 legacy/，WP0 遷移成正式模組中）",
+      "status": "prototype",
+      "summary": "有個性、有記憶、有自己生活的居民。AI 只能從「已啟用模組開放給 AI 的指令」中選擇行動。",
       "requires": [],
       "optional": [
         "social",
@@ -25,8 +25,8 @@
     {
       "id": "crowd",
       "name": "群體幫手",
-      "status": "planned",
-      "summary": "大量無名小人，依指令執行搬運、採集、蓋房等背景工作。玩家不直接指揮，定位為小鎮的生活感與背景勞動。（原型程式在 legacy/，WP0 遷移成正式模組中）",
+      "status": "prototype",
+      "summary": "大量無名小人，依指令執行搬運、採集、蓋房等背景工作。玩家不直接指揮，定位為小鎮的生活感與背景勞動。",
       "requires": [],
       "optional": [
         "residents"
