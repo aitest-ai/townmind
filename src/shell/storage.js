@@ -22,11 +22,14 @@ export function createStorage(prefix = 'townmind') {
       }
     },
     loadBackup(slot) { return this.load(`${slot}:backup`); },
-    save(slot, blob) {
+    // rotate：把上一份存成備份。上一份如果是壞的（不是完整 JSON）就不轉，避免把好的備份蓋掉。
+    save(slot, blob, { rotate = true } = {}) {
       const text = JSON.stringify(blob);
       try {
         const prev = get(key(slot));
-        if (prev != null) set(key(`${slot}:backup`), prev);
+        let prevOk = false;
+        if (prev != null) { try { JSON.parse(prev); prevOk = true; } catch { /* 壞的 */ } }
+        if (rotate && prevOk) set(key(`${slot}:backup`), prev);
         set(key(slot), text);
         return { ok: true, bytes: text.length };
       } catch (e) {
@@ -34,6 +37,13 @@ export function createStorage(prefix = 'townmind') {
       }
     },
     remove(slot) { del(key(slot)); },
+    raw(slot) { return get(key(slot)); },
+    exportText(text, filename) {
+      const url = URL.createObjectURL(new Blob([text], { type: 'application/json' }));
+      const a = document.createElement('a'); a.href = url; a.download = filename;
+      document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+    },
     // 匯出：下載一個 .json 檔
     exportFile(blob, filename) {
       const url = URL.createObjectURL(new Blob([JSON.stringify(blob, null, 1)], { type: 'application/json' }));

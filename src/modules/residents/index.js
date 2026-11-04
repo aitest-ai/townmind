@@ -15,7 +15,7 @@ export default {
   id: 'residents',
   version: '0.2.0',
   requires: [],
-  optional: ['social', 'quests-diary'],
+  optional: [], // social、quests-diary 依賴居民（反過來），所以居民不能宣告它們，否則會循環依賴
   conflicts: [],
   emits: ['residents:decided', 'residents:announced', 'residents:greeted'],
   config: { thinkEvery: 7, thinkJitter: 3, sayFor: 8, ring: null, stroll: true, strollRadius: 2.5, greetDistance: 2 },

@@ -122,6 +122,13 @@ export function banner(text, ms = 12000) {
   clearTimeout(b._t); b._t = setTimeout(() => { b.style.display = 'none'; }, ms);
 }
 
+// ---------- 可以關掉的對話框（例如存檔讀不出來時的選擇） ----------
+export function showDialog(info) {
+  showFatal({ ...info, actions: (info.actions || []).map((a) => ({ ...a, run: () => { hideDialog(); a.run?.(); } })) });
+  document.getElementById('fatal').dataset.kind = 'dialog';
+}
+export function hideDialog() { document.getElementById('fatal').style.display = 'none'; }
+
 // ---------- 出錯畫面 ----------
 // info：{ title, message, hint, details: [字串], actions: [{ label, run, primary }] }
 export function showFatal(info) {
