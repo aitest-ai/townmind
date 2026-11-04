@@ -189,19 +189,22 @@
     {
       "id": "social",
       "name": "好感度與送禮",
-      "status": "planned",
-      "summary": "居民好感度、送禮、解鎖對話與配方。",
+      "status": "implemented",
+      "summary": "好感度、送禮（喜歡的東西加更多）、居民小請求（範本＋規則，不接 AI），升級可解鎖旗標。",
       "requires": [
         "residents"
       ],
-      "optional": [],
+      "optional": [
+        "quests"
+      ],
       "conflicts": [],
       "needsData": [
         "items"
       ],
       "provides": [
         "friendship"
-      ]
+      ],
+      "schema": true
     },
     {
       "id": "quests-diary",

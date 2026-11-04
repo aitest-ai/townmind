@@ -236,6 +236,14 @@ export default {
           advisors.push(advisor);
         },
         list: () => list.map((r) => ({ id: r.id, name: r.name, role: r.role, say: r.say })),
+        // 讓居民說一句話（頭上的氣泡），例如收到禮物時的回應；只用規則與範本，不呼叫 AI
+        say(id, text, seconds = cfg.sayFor) {
+          const r = byId.get(id);
+          if (!r) return false;
+          r.say = String(text).slice(0, 60); r.sayUntil = clock + seconds; r.walkTo = null; r.pauseUntil = clock + Math.min(seconds, 6);
+          syncEntity(r);
+          return true;
+        },
         get: (id) => byId.get(id) ?? null,
         // 給之後的 LLM 腦：此刻這位居民的提示詞
         promptFor(id) {

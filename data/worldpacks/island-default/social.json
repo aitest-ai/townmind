@@ -1,0 +1,52 @@
+{
+  "_說明": "好感度等級、小請求可能要的東西、居民說的話（範本）。{name} 居民名字、{item} 物品、{qty} 數量。",
+  "levels": [
+    {
+      "points": 0,
+      "name": "點頭之交"
+    },
+    {
+      "points": 20,
+      "name": "朋友"
+    },
+    {
+      "points": 50,
+      "name": "好朋友",
+      "flag": "friend.{id}"
+    },
+    {
+      "points": 100,
+      "name": "好麻吉"
+    },
+    {
+      "points": 180,
+      "name": "最好的朋友"
+    }
+  ],
+  "requestItems": [
+    "wood",
+    "apple",
+    "berry",
+    "stone",
+    "shell",
+    "plank"
+  ],
+  "text": {
+    "request": [
+      "{name}想要 {qty} 個{item}，可以幫忙嗎？",
+      "{name}說：「如果有 {qty} 個{item}就太好了！」"
+    ],
+    "thanks": [
+      "謝謝你！{name}好開心！",
+      "{name}笑得好燦爛：「你真是好朋友！」"
+    ],
+    "liked": [
+      "哇！這是我最喜歡的{item}！",
+      "{item}！你怎麼知道我喜歡這個？"
+    ],
+    "normal": [
+      "謝謝你送我{item}！",
+      "是{item}耶，謝謝！"
+    ]
+  }
+}

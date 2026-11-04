@@ -377,6 +377,49 @@
       "rewards": {
         "points": 10
       }
+    },
+    {
+      "id": "first_gift",
+      "line": "main",
+      "title": "送一份禮物",
+      "description": "走到居民身邊，在「好朋友」面板送一樣東西。送他喜歡的東西（❤️）會更開心！",
+      "giver": "ashi",
+      "requires": [
+        "welcome"
+      ],
+      "module": "social",
+      "conditions": [
+        {
+          "type": "event",
+          "event": "social:gifted",
+          "count": 1,
+          "label": "送 1 次禮物"
+        }
+      ],
+      "rewards": {
+        "points": 10
+      }
+    },
+    {
+      "id": "help_neighbor",
+      "line": "side",
+      "title": "熱心的鄰居",
+      "description": "完成 2 個居民的小請求。",
+      "requires": [
+        "first_gift"
+      ],
+      "module": "social",
+      "conditions": [
+        {
+          "type": "event",
+          "event": "social:requestDone",
+          "count": 2,
+          "label": "完成 2 個小請求"
+        }
+      ],
+      "rewards": {
+        "points": 15
+      }
     }
   ]
 }
