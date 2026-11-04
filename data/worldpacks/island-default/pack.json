@@ -17,6 +17,10 @@
         "workers": 24
       }
     },
+    "quests": {
+      "enabled": true,
+      "config": {}
+    },
     "actions": {
       "enabled": true,
       "config": {}
