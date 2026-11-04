@@ -2,7 +2,7 @@ import {
   createWorld, stepWorld, snapshot, assignWorkers, countTasks, addLog,
   TASKS, TASK_LABEL, TASK_COLOR, MAX_HOUSES,
 } from './world.js';
-import { DEFAULT_NPCS } from '../data/npcs.js';
+import { DEFAULT_NPCS } from './npcs.js';
 import { mockDecide, llmDecide } from './brain.js';
 import { createRenderer2D } from './render2d.js';
 

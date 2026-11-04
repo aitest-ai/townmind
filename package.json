@@ -4,8 +4,9 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "python3 -m http.server 8123",
+    "dev": "node scripts/serve.mjs 8123",
     "test": "node --test \"tests/**/*.test.mjs\"",
-    "check": "node scripts/check-pack.mjs && node scripts/check-boundaries.mjs && node scripts/check-catalog.mjs"
+    "check": "node scripts/check-pack.mjs && node scripts/check-boundaries.mjs && node scripts/check-catalog.mjs",
+    "smoke": "node --test --test-concurrency=1 \"tests/e2e/*.e2e.mjs\""
   }
 }

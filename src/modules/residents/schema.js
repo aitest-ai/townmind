@@ -24,6 +24,7 @@ export default {
       for (const it of arr(r.likes)) if (!ids.items.has(it)) W(f, `居民「${r.id}」喜歡的物品「${it}」不存在`);
     }
     const homes = new Set();
+    if (!arr(data.residents).length) return; // 沒有居民資料（例如這次沒開居民模組）時，不檢查家
     island.placements.forEach((p, i) => {
       if (p?.type !== 'home') return;
       if (!ids.residents?.has(p.ref)) E('island.json', `placements 第 ${i + 1} 筆的 home 對應不存在的居民「${p.ref}」`);

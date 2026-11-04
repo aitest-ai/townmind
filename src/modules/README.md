@@ -9,8 +9,8 @@
 ## 目前狀態
 | 模組 | 狀態 | 備註 |
 | --- | --- | --- |
-| residents | prototype | 現有的 `src/brain.js`、`src/prompt.js`、`api/decide.js`，待遷移成正式模組 |
-| crowd | prototype | 現有的 `src/world.js` 小人，待遷移 |
+| residents | planned | 原型在 `legacy/brain.js`、`legacy/prompt.js`，WP0 遷移中 |
+| crowd | planned | 原型在 `legacy/world.js`，WP0 遷移中 |
 | 其他 | planned | 見 catalog.json |
 
 沒有「implemented」的模組，是因為第一批模組（含遷移）就是 WP0 的工作。

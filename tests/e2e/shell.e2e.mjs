@@ -1,0 +1,87 @@
+// PR3 冒煙測試：外殼啟動、白話錯誤、網址開關、存讀檔、舊版原型仍可執行。
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { join } from 'node:path';
+import { setup, SHOTS } from './helpers.mjs';
+
+const env = await setup();
+test.after(() => env.close());
+
+test('外殼啟動：沒有錯誤、顯示世界包標題、時間會走、有存檔面板', async () => {
+  const page = await env.newPage('/?new=1&seed=7');
+  await env.waitRunning(page);
+  assert.equal(await page.evaluate(() => window.__tm.status), 'running');
+  assert.equal(await page.textContent('#title'), '小島日常');
+  const t0 = await page.evaluate(() => window.__tm.services.time.elapsed);
+  await page.waitForTimeout(600);
+  assert.ok(await page.evaluate(() => window.__tm.services.time.elapsed) > t0);
+  assert.ok(await page.isVisible('[data-panel="shell.save"]'));
+  assert.match(await page.textContent('[data-panel="shell.bag"]'), /斧頭 × 1/);
+  assert.match(await page.textContent('[data-panel="shell.modules"]'), /還在製作中/);
+  await page.screenshot({ path: join(SHOTS, 'pr3-shell.png') });
+  assert.deepEqual(page.errors, []);
+});
+
+test('平板直式畫面也能用', async () => {
+  const page = await env.newPage('/?new=1', { width: 820, height: 1180 });
+  await env.waitRunning(page);
+  await page.screenshot({ path: join(SHOTS, 'pr3-shell-tablet.png') });
+  assert.deepEqual(page.errors, []);
+});
+
+test('世界包壞掉：畫面上用白話說明，不是白畫面', async () => {
+  const page = await env.newPage();
+  await page.route('**/data/worldpacks/island-default/items.json', (r) => r.fulfill({ contentType: 'application/json', body: '[{"id":"wood","name":"木頭","category":"weird","stack":1}]' }));
+  await page.goto(env.base + '/');
+  await env.waitRunning(page);
+  assert.equal(await page.evaluate(() => window.__tm.status), 'failed');
+  const text = await page.textContent('#fatal');
+  assert.match(text, /世界包「island-default」有 \d+ 個問題/);
+  assert.match(text, /category「weird」不合法/);
+  assert.match(text, /怎麼辦/);
+  await page.screenshot({ path: join(SHOTS, 'pr3-fatal.png') });
+});
+
+test('存檔後重新整理：時間與背包接續；壞存檔會白話提示並改開新遊戲', async () => {
+  const page = await env.newPage('/?new=1&seed=3');
+  await env.waitRunning(page);
+  await page.evaluate(() => { const t = window.__tm.services; t.time.skipDays(2); t.inventory.add('player', 'wood', 5); window.__tm.saveNow(); });
+  await page.goto(env.base + '/');
+  await env.waitRunning(page);
+  const snap = await page.evaluate(() => window.__tm.snapshot());
+  assert.equal(snap.day, 3);
+  assert.ok(snap.bag.some((s) => s.item === 'wood' && s.qty === 5));
+  assert.equal(await page.evaluate(() => window.__tm.isNew), false);
+  // 弄壞存檔（關掉頁面時會自動存檔，所以在新分頁載入前才寫入壞資料）
+  const ctx = page.context();
+  await page.close();
+  const p2 = await ctx.newPage();
+  await p2.addInitScript(() => { if (!sessionStorage.getItem('done')) { sessionStorage.setItem('done', '1'); localStorage.setItem('townmind:save:island-default', '{"format":2,"modu'); } });
+  await test2(p2);
+});
+
+async function test2(page) {
+  await page.goto(env.base + '/');
+  await env.waitRunning(page);
+  assert.match(await page.textContent('#log'), /存檔壞掉了/);
+  assert.equal(await page.evaluate(() => localStorage.getItem('townmind:save:island-default:broken')), '{"format":2,"modu');
+  await page.screenshot({ path: join(SHOTS, 'pr3-broken-save.png') });
+}
+
+test('網址可開啟世界包沒開的功能；未知功能白話略過', async () => {
+  const page = await env.newPage('/?new=1&mods=nosuch=on');
+  await env.waitRunning(page);
+  assert.match(await page.textContent('[data-panel="shell.modules"]'), /「nosuch」不是已知的功能/);
+});
+
+test('舊版原型 legacy.html 仍可執行（3D、小人、居民）', async () => {
+  const page = await env.newPage('/legacy.html');
+  await page.waitForFunction(() => window.__town?.view3d, null, { timeout: 20000 });
+  await page.waitForTimeout(1500);
+  const s = await page.evaluate(() => ({ view: window.__town.view, workers: window.__town.world.workers.length, t: window.__town.world.t }));
+  assert.equal(s.view, '3d');
+  assert.equal(s.workers, 24);
+  assert.ok(s.t > 0);
+  await page.screenshot({ path: join(SHOTS, 'pr3-legacy.png') });
+  assert.deepEqual(page.errors.filter((e) => !/WebGL|GPU stall|swiftshader/i.test(e)), []);
+});
