@@ -1,6 +1,6 @@
 // Vercel Serverless Function：AI 腦的後台。尚未用真實金鑰測試（見 docs/PROTOTYPE_NOTES.md）。
 // 需要環境變數 ANTHROPIC_API_KEY；可選 TOWN_MODEL（預設 claude-haiku-5-5）。
-import { buildPrompt } from '../src/prompt.js';
+import { buildPrompt } from '../legacy/prompt.js';
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'POST only' });

@@ -5,7 +5,8 @@
 //  1. 有 index.js 的模組：程式裡的 id 要等於資料夾名稱；requires／optional／conflicts 要和 catalog 完全一樣。
 //  2. 有 index.js 的模組，catalog 的 status 必須是 implemented 或 prototype（不能還寫 planned）。
 //  3. catalog 寫 implemented 的模組一定要有 index.js。
-//  4. 有 schema.js 的資料夾，schema 的 module 欄位要等於資料夾名稱。
+//  4. 有 schema.js 的資料夾，schema 的 module 欄位要等於資料夾名稱；catalog 的 schema: true 要和檔案是否存在一致
+//     （瀏覽器靠這個欄位決定要不要載入 schema，避免去抓不存在的檔案）。
 import { readdir, readFile, access } from 'node:fs/promises';
 import { join, resolve, dirname } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
@@ -22,7 +23,9 @@ export async function checkCatalog(root, catalog) {
     const c = cat.get(id);
     const idx = join(base, id, 'index.js');
     const sch = join(base, id, 'schema.js');
-    if (await exists(sch)) {
+    const hasSch = await exists(sch);
+    if (c && !!c.schema !== hasSch) errors.push(`[catalog.json] 「${id}」的 schema 欄位應該是 ${hasSch}（${hasSch ? '有' : '沒有'} src/modules/${id}/schema.js）`);
+    if (hasSch) {
       try {
         const s = (await import(pathToFileURL(sch).href)).default;
         if (s?.module !== id) errors.push(`[src/modules/${id}/schema.js] module 欄位是「${s?.module}」，應該是「${id}」`);
@@ -42,6 +45,7 @@ export async function checkCatalog(root, catalog) {
     if (!['implemented', 'prototype'].includes(c.status)) errors.push(`[src/modules/${id}] 已經有 index.js，catalog.json 的 status 應改成 implemented 或 prototype（目前是 ${c.status}）`);
   }
   for (const [id, c] of cat) {
+    if (c.schema && !dirs.includes(id)) errors.push(`[catalog.json] 「${id}」標了 schema: true，但沒有 src/modules/${id}/schema.js`);
     if (c.status === 'implemented' && !(await exists(join(base, id, 'index.js')))) errors.push(`[catalog.json] 「${id}」標成 implemented，但沒有 src/modules/${id}/index.js`);
   }
   return { errors };

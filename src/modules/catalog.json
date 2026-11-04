@@ -1,12 +1,12 @@
 {
   "schemaVersion": 1,
-  "note": "模組目錄：機器可讀的模組路線圖。status：implemented 已實作、prototype 原型階段（需遷移成正式模組）、planned 規劃中、deferred 暫緩。needsData 的寫法：'recipes' 表示 recipes.json 至少一筆；'species:crop' 表示至少有一個 kind 為 crop 的物種；'species:fish|bug|animal' 表示其中任一種。模組之間只能依 requires／optional 互相使用公開 api。",
+  "note": "模組目錄：機器可讀的模組路線圖。status：implemented 已實作、prototype 原型階段（已是模組，但功能仍在原型程度）、planned 規劃中、deferred 暫緩。needsData 的寫法：'recipes' 表示 recipes.json 至少一筆；'species:crop' 表示至少有一個 kind 為 crop 的物種；'species:fish|bug|animal' 表示其中任一種。模組之間只能依 requires／optional 互相使用公開 api。 schema: true 表示模組資料夾裡有 schema.js（世界包資料規格），由 npm run check 檢查與實際檔案一致。",
   "modules": [
     {
       "id": "residents",
       "name": "AI 居民",
-      "status": "prototype",
-      "summary": "有個性、有記憶、有自己生活的居民。AI 只能從「已啟用模組開放給 AI 的指令」中選擇行動。",
+      "status": "planned",
+      "summary": "有個性、有記憶、有自己生活的居民。AI 只能從「已啟用模組開放給 AI 的指令」中選擇行動。（原型程式在 legacy/，WP0 遷移成正式模組中）",
       "requires": [],
       "optional": [
         "social",
@@ -19,13 +19,14 @@
       "provides": [
         "commands.ai",
         "chat"
-      ]
+      ],
+      "schema": true
     },
     {
       "id": "crowd",
       "name": "群體幫手",
-      "status": "prototype",
-      "summary": "大量無名小人，依指令執行搬運、採集、蓋房等背景工作。玩家不直接指揮，定位為小鎮的生活感與背景勞動。",
+      "status": "planned",
+      "summary": "大量無名小人，依指令執行搬運、採集、蓋房等背景工作。玩家不直接指揮，定位為小鎮的生活感與背景勞動。（原型程式在 legacy/，WP0 遷移成正式模組中）",
       "requires": [],
       "optional": [
         "residents"
@@ -50,7 +51,8 @@
       ],
       "provides": [
         "gather"
-      ]
+      ],
+      "schema": true
     },
     {
       "id": "crafting",
@@ -69,7 +71,8 @@
       ],
       "provides": [
         "craft"
-      ]
+      ],
+      "schema": true
     },
     {
       "id": "building",
@@ -103,7 +106,8 @@
       ],
       "provides": [
         "farm"
-      ]
+      ],
+      "schema": true
     },
     {
       "id": "capture",
@@ -120,7 +124,8 @@
       ],
       "provides": [
         "capture"
-      ]
+      ],
+      "schema": true
     },
     {
       "id": "economy",
@@ -208,7 +213,8 @@
       "needsData": [
         "tracks"
       ],
-      "summary": "競速賽事：滑板車、小舟、單輪車、風箏滑翔等。賽道由世界包 tracks.json 定義（檢查點、地形速度係數、道具箱）。無碰撞傷害、可愛的失誤動畫（轉圈、掉進水裡被撈起）。AI 居民可當對手，只選擇『油門、路線、使用道具』等受限指令。"
+      "summary": "競速賽事：滑板車、小舟、單輪車、風箏滑翔等。賽道由世界包 tracks.json 定義（檢查點、地形速度係數、道具箱）。無碰撞傷害、可愛的失誤動畫（轉圈、掉進水裡被撈起）。AI 居民可當對手，只選擇『油門、路線、使用道具』等受限指令。",
+      "schema": true
     },
     {
       "id": "minigames",
@@ -221,7 +227,8 @@
       "needsData": [
         "games"
       ],
-      "summary": "限時小遊戲集：釣魚大賽、採果比賽、尋寶（地圖碎片）、捉迷藏、節奏跳舞、蓋房子計時賽、接球。共用計分、獎盃與排行榜介面。"
+      "summary": "限時小遊戲集：釣魚大賽、採果比賽、尋寶（地圖碎片）、捉迷藏、節奏跳舞、蓋房子計時賽、接球。共用計分、獎盃與排行榜介面。",
+      "schema": true
     },
     {
       "id": "events",
@@ -236,7 +243,8 @@
       "needsData": [
         "events"
       ],
-      "summary": "島上節慶與賽季：把比賽排進行事曆（週末運動會、煙火大會），賽季積分、獎盃陳列室、居民報名與賽後閒聊。班級模式可排進課堂時段。"
+      "summary": "島上節慶與賽季：把比賽排進行事曆（週末運動會、煙火大會），賽季積分、獎盃陳列室、居民報名與賽後閒聊。班級模式可排進課堂時段。",
+      "schema": true
     },
     {
       "id": "combat",

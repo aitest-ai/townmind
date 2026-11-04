@@ -13,6 +13,22 @@ jobs:
           node-version: 22
       - name: 單元測試
         run: npm test
-      - name: 世界包與邊界檢查
+      - name: 世界包、邊界與目錄一致性檢查
         run: npm run check
-      # TODO（WP9）：加入 Playwright 冒煙測試（3D 啟動、操作、存讀檔）與「新增模組的 PR 不得修改 src/core」的檢查。
+
+  smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: 安裝 Playwright（只在 CI 安裝，專案本身不需要任何套件）
+        run: npm install --no-save playwright@1.63.0 && npx playwright install --with-deps chromium
+      - name: 瀏覽器冒煙測試
+        run: npm run smoke
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: screenshots
+          path: docs/screenshots/

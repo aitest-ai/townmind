@@ -90,10 +90,13 @@ id 格式與唯一、參照完整、地圖尺寸與出生點、模組依賴與�
 - **AI 現況**：`ctx.registerAIContext((call) => ['田裡有 3 塊熟了'])`；居民模組用 `ctx.collectAIContext({ actor })` 取得 `[{ module, lines }]`（每模組最多 8 句、每句最多 200 字）。關掉模組，它的現況自動不再出現在提示詞裡。
 
 ## 9. 遷移計畫（原型 → 框架）
-- `residents` 模組：`src/brain.js`、`src/prompt.js`、`data/npcs.js` → 讀世界包 residents；提示詞的行動清單改用 `describeForAI()`；`api/decide.js` 保留。
-- `crowd` 模組：`src/world.js` 的小人與工地邏輯。
-- 渲染層（`render2d`、`render3d`）改讀核心實體，不再讀 `world.js` 內部。
-- `data/npcs.js` 由世界包取代。遷移期間原型須持續可執行。
+- 舊原型整包移到 `legacy/`（`legacy.html` 開啟），**不再修改**，作為比對基準，WP0 完成後再決定是否刪除。
+- 新版外殼：`index.html` → `src/shell/boot.js`（讀世界包、驗證、依 catalog 動態載入模組、連帶關閉、讀存檔與離線補算、主迴圈、自動存檔）。
+  外殼只依 catalog 的 `status`（implemented／prototype）與 `schema` 欄位決定要載入什麼，**新增模組不需要改外殼**。
+- `residents` 模組：`legacy/brain.js`、`legacy/prompt.js` → 讀世界包 residents；提示詞的行動清單改用 `describeCommandsForAI()`；`api/decide.js` 保留（目前不接 AI，只用規則腦）。
+- `crowd` 模組：`legacy/world.js` 的小人與工地邏輯。
+- 渲染層（`src/render2d`、`src/render3d`）只讀核心實體與世界包。
+- WP0a：原型的小鎮包成 `prototype-town` 世界包＋crowd／residents 模組，和 legacy 截圖比對。WP0b：換成島嶼地圖，用新截圖當基準。
 
 ## 10. 留給實作者判斷的事
 實體資料結構、services 的細節 API、UI 外殼樣式、群體小人的效能方案（instancing／VAT）、LLM 批次生成的 prompt 設計、地圖編輯方式。覺得契約不合理，請先提出意見。
