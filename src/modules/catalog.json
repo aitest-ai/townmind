@@ -193,7 +193,7 @@
     {
       "id": "classroom",
       "name": "課堂模式",
-      "status": "planned",
+      "status": "implemented",
       "summary": "時間倍率預設、教師控制台、課堂用的安全限制。",
       "requires": [],
       "optional": [],

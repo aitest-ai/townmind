@@ -6,11 +6,12 @@
 //   ?mods=crowd=on,farming=off   覆寫模組開關
 //   ?new=1                 不讀存檔，開新遊戲（不會刪除舊存檔）
 //   ?seed=123              指定亂數種子（測試用）
-import { Engine, FrameworkError, validatePack, loadPack, parseOverrides, resolveEnabled, createCoreServices } from '../core/index.js';
+import { Engine, FrameworkError, validatePack, loadPack, parseOverrides, resolveEnabled, createCoreServices, defaultTextFilter } from '../core/index.js';
 import { createStorage } from './storage.js';
-import { createPanelHost, toast, log, showFatal } from './ui.js';
+import { createPanelHost, toast, log, showFatal, banner } from './ui.js';
 import { createPlayerController } from './player.js';
 import { attachInput } from './input.js';
+import { createPolicy } from './policy.js';
 
 const $ = (id) => document.getElementById(id);
 const params = new URLSearchParams(location.search);
@@ -106,7 +107,23 @@ async function boot() {
   const storage = createStorage('townmind');
   const saved = params.get('new') ? { status: 'empty' } : storage.load(SAVE_SLOT);
   const seed = Number(params.get('seed')) || saved.blob?.meta?.seed || (Math.random() * 2 ** 31) >>> 0;
-  const services = { ...createCoreServices(data), notify: (text) => log(String(text).slice(0, 120)) }; // notify：模組的白話訊息 → 事件紀錄
+  // 外殼提供給模組的服務（不在核心）：
+  //   notify(text, level)：白話訊息 → 事件紀錄；level 'banner' 顯示在畫面中央（例如「下課囉」）
+  //   policy：模組設定的限制（見 policy.js）
+  //   now()：真實時間（毫秒），課堂計時用；測試時可用 window.__tm.clockOffset 快轉
+  //   save()：立刻存檔
+  const policy = createPolicy();
+  let requestSave = () => false;
+  const services = {
+    ...createCoreServices(data),
+    notify: (text, level = 'info') => { const t = String(text).slice(0, 160); log(t); if (level === 'banner') banner(t); else if (level === 'toast') toast(t); },
+    policy,
+    now: () => Date.now() + (debug.clockOffset || 0),
+    save: () => requestSave(),
+  };
+  services.textFilter = (text, opts) => (policy.get('playerTyping', true) === false
+    ? { ok: false, reason: policy.get('typingReason', '現在不能打字喔') }
+    : defaultTextFilter(text, opts));
   const engine = new Engine({ data, services, seed, labels, log: (...a) => console.info(...a), onError: (info) => { log(`⚠ ${labels[info.module] || info.module}：${info.message}`); } });
   for (const d of defs) engine.register(d);
   let started;
@@ -163,6 +180,7 @@ async function boot() {
     if (why) log(`💾 ${why}`);
     return true;
   };
+  requestSave = () => saveNow('已存檔');
   addEventListener('pagehide', () => saveNow());
   document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') saveNow(); });
 
@@ -197,8 +215,10 @@ async function boot() {
   const shellPanels = () => [
     { id: 'shell.status', title: '小島狀態', order: 0, nodes: [
       { type: 'stat', label: '時間', value: time.clockText() },
-      { type: 'stat', label: '一天的長度', value: `${Math.round(time.dayLengthSec / 60)} 分鐘` },
-      { type: 'select', name: 'speed', label: '時間速度', options: SPEEDS, value: String(time.paused ? 0 : time.timeScale), onChange: 'speed' },
+      { type: 'stat', label: '一天的長度', value: time.mode === 'real' ? '跟著真實時鐘' : `${Math.round(time.dayLengthSec / 60)} 分鐘` },
+      ...(policy.get('playerTimeControl', true)
+        ? [{ type: 'select', name: 'speed', label: '時間速度', options: SPEEDS.filter((o) => Number(o.value) <= policy.get('maxSpeed', 99)), value: String(time.paused ? 0 : time.timeScale), onChange: 'speed' }]
+        : [{ type: 'stat', label: '時間速度', value: time.paused ? '暫停中（老師設定）' : `${time.timeScale} 倍（老師設定）` }]),
       { type: 'select', name: 'view', label: '畫面', options: [{ value: '3d', label: '3D 立體' }, { value: '2d', label: '2D 俯視' }], value: current, onChange: 'view' },
       ...(current === '3d' ? [{ type: 'text', text: '鏡頭：拖曳旋轉、兩指或右鍵平移、滾輪或兩指縮放。' }, { type: 'button', label: '重設鏡頭', action: 'camReset' }] : []),
     ] },
@@ -211,9 +231,11 @@ async function boot() {
       { type: 'buttons', items: [
         { type: 'button', label: '立刻存檔', action: 'save', primary: true },
         { type: 'button', label: '匯出存檔', action: 'export' },
-        { type: 'button', label: '匯入存檔', action: 'import' },
-        { type: 'button', label: '讀取備份', action: 'backup' },
-        { type: 'button', label: '開新遊戲', action: 'newgame' },
+        ...(policy.get('playerSaveControl', true) ? [
+          { type: 'button', label: '匯入存檔', action: 'import' },
+          { type: 'button', label: '讀取備份', action: 'backup' },
+          { type: 'button', label: '開新遊戲', action: 'newgame' },
+        ] : []),
       ] },
     ] },
     { id: 'shell.modules', title: '這次開啟的功能', order: 990, nodes: [
@@ -231,19 +253,22 @@ async function boot() {
   };
   const shellAction = async (action, values) => {
     switch (action) {
-      case 'speed': { const k = Number(values.speed); time.pause(k === 0); if (k > 0) time.setTimeScale(k); break; }
+      case 'speed': {
+        if (!policy.get('playerTimeControl', true)) { toast('老師已經設定好時間速度了', 'warn'); break; }
+        const k = Math.min(Number(values.speed), policy.get('maxSpeed', 99)); time.pause(k === 0); if (k > 0) time.setTimeScale(k); break;
+      }
       case 'view': await setView(values.view); break;
       case 'camReset': views['3d']?.resetCamera(); break;
       case 'save': if (saveNow('已存檔')) toast('已存檔'); break;
       case 'export': { saveNow(); storage.exportFile(engine.serializeAll({ gameDay: time.day }), `小島存檔-${data.pack.id}-第${time.day}天.json`); break; }
-      case 'import': try { await reloadWith(await storage.importFile()); } catch (e) { toast(e.message, 'bad'); } break;
+      case 'import': if (!policy.get('playerSaveControl', true)) break; try { await reloadWith(await storage.importFile()); } catch (e) { toast(e.message, 'bad'); } break;
       case 'backup': {
         const b = storage.loadBackup(SAVE_SLOT);
         if (b.status !== 'ok') { toast('沒有可用的備份', 'warn'); break; }
         await reloadWith(b.blob); break;
       }
       case 'newgame':
-        if (confirm('要開新遊戲嗎？目前的存檔會先存成備份，可以用「讀取備份」找回來。')) {
+        if (policy.get('playerSaveControl', true) && confirm('要開新遊戲嗎？目前的存檔會先存成備份，可以用「讀取備份」找回來。')) {
           saveNow(); const cur = storage.load(SAVE_SLOT); if (cur.status === 'ok') storage.save(`${SAVE_SLOT}:backup`, cur.blob);
           storage.remove(SAVE_SLOT); const u = new URL(location.href); u.searchParams.delete('new'); location.href = u.href;
         }
@@ -255,7 +280,11 @@ async function boot() {
     if (node.action) { shellAction(node.action, values); return; }
     if (!node.command) return;
     const args = { ...(node.args || {}) };
-    for (const [k, inputName] of Object.entries(node.argsFrom || {})) args[k] = values[inputName] ?? '';
+    for (const [k, inputName] of Object.entries(node.argsFrom || {})) {
+      const v = values[inputName];
+      if (v !== undefined && v !== '') args[k] = v;          // 輸入框有填才覆蓋
+      else if (!(k in args)) args[k] = '';                    // 沒有預設值：交給指令驗證（會說明缺什麼）
+    }
     const r = engine.runCommand(node.command, args);
     if (!r.ok) toast(r.reason || r.error, 'warn');
     else if (node.argsFrom) for (const inputName of Object.values(node.argsFrom)) values[inputName] = '';
@@ -313,11 +342,12 @@ async function boot() {
   });
 
   // 10. 主迴圈
-  let last = performance.now(), lastHud = 0;
+  let last = performance.now(), lastHud = 0, lastIdle = 0;
   const frame = (now) => {
     const dt = Math.min(0.1, (now - last) / 1000); last = now;
     let rem = time.advance(dt);
-    while (rem > 0) { const s = Math.min(rem, 0.25); engine.update(s); rem -= s; }
+    if (rem > 0) while (rem > 0) { const s = Math.min(rem, 0.25); engine.update(s); rem -= s; }
+    else if (now - lastIdle > 250) { lastIdle = now; engine.update(0); } // 暫停時系統仍收到 dt=0（例如課堂計時要繼續走）
     player.update(dt);
     if (now - lastHud > 200) { lastHud = now; refreshHud(); }
     try { views[current].render(dt); } catch (e) { debug.errors.push(e.message); }

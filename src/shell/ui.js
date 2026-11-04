@@ -112,6 +112,16 @@ export function log(text) {
   for (const line of logLines.slice(-30).reverse()) box.append(el('div', '', line));
 }
 
+// ---------- 畫面中央的大訊息（例如「下課囉」） ----------
+export function banner(text, ms = 12000) {
+  let b = document.getElementById('banner');
+  if (!b) { b = el('div'); b.id = 'banner'; document.body.append(b); b.onclick = () => { b.style.display = 'none'; }; }
+  b.textContent = text;
+  b.append(el('small', '', '（點一下關閉）'));
+  b.style.display = 'flex';
+  clearTimeout(b._t); b._t = setTimeout(() => { b.style.display = 'none'; }, ms);
+}
+
 // ---------- 出錯畫面 ----------
 // info：{ title, message, hint, details: [字串], actions: [{ label, run, primary }] }
 export function showFatal(info) {

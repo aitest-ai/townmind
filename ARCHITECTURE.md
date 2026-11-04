@@ -103,5 +103,13 @@ id 格式與唯一、參照完整、地圖尺寸與出生點、模組依賴與�
 - 走近（2.2 格內）有互動的實體，畫面下方出現大按鈕（`engine.interactionsFor`）；不能做時按鈕上直接寫原因。空白鍵／E 執行第一個可用的互動。
 - `island.json` 的 `look`：`camera: 'overview'` 看整張地圖（原型小鎮），預設鏡頭跟著玩家；`outside: 'forest'` 外圍畫森林，否則是海；`flowers: false` 不畫小花。
 
+## 9.2 外殼提供給模組的服務（不在核心）
+外殼在 `src/shell/boot.js` 建立 Engine 時，除了核心服務，還放入這些服務（模組用 `ctx.services.xxx?.()` 呼叫，沒有外殼時，例如在 Node 測試裡，就不存在）：
+- `notify(text, level)`：白話訊息寫進事件紀錄；`level: 'banner'` 顯示在畫面中央，`'toast'` 顯示提示。
+- `policy`：模組設定外殼要遵守的限制（`src/shell/policy.js`）：`playerTimeControl`、`maxSpeed`、`playerTyping`、`typingReason`、`playerSaveControl`。多個模組設定時取最嚴格的；模組關掉時自動清掉。
+- `now()`：真實時間（毫秒）。
+- `save()`：立刻存檔。
+遊戲暫停時，外殼仍以 `dt = 0` 每秒呼叫系統幾次，所以「真實時間」的計時（例如上課倒數）不會停。
+
 ## 10. 留給實作者判斷的事
 實體資料結構、services 的細節 API、UI 外殼樣式、群體小人的效能方案（instancing／VAT）、LLM 批次生成的 prompt 設計、地圖編輯方式。覺得契約不合理，請先提出意見。
