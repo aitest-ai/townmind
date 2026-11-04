@@ -121,11 +121,11 @@
     {
       "id": "farming",
       "name": "耕作",
-      "status": "planned",
-      "summary": "翻土、播種、澆水、收成；作物依天數成長，受季節影響。",
+      "status": "implemented",
+      "summary": "播種、澆水、收成；作物依天數長大、受季節影響（季節來自核心時間）；下雨自動澆水（只聽天氣事件）；不會枯死。",
       "requires": [],
       "optional": [
-        "weather-seasons"
+        "residents"
       ],
       "conflicts": [],
       "needsData": [

@@ -42,10 +42,17 @@ const PRESETS = {
     g.fillStyle = '#a0784a'; g.fillRect(cx - t * 0.36, cy - t * 0.14, t * 0.72, t * 0.3);
     g.fillStyle = '#7a5a34'; g.fillRect(cx - t * 0.32, cy + t * 0.16, t * 0.08, t * 0.2); g.fillRect(cx + t * 0.24, cy + t * 0.16, t * 0.08, t * 0.2);
   },
-  plot(g, cx, cy, t) {
-    g.fillStyle = '#8a6440'; g.fillRect(cx - t * 0.45, cy - t * 0.45, t * 0.9, t * 0.9);
-    g.strokeStyle = '#6f4e30'; g.lineWidth = Math.max(1, t * 0.03);
+  plot(g, cx, cy, t, e, env = {}) {
+    const s = e.state || {};
+    g.fillStyle = s.wateredDay != null && s.wateredDay === env.today ? '#6b4a2e' : '#8a6440'; // 今天澆過水：土顏色深一點
+    g.fillRect(cx - t * 0.45, cy - t * 0.45, t * 0.9, t * 0.9);
+    g.strokeStyle = '#5f4128'; g.lineWidth = Math.max(1, t * 0.03);
     for (let i = -1; i <= 1; i++) { g.beginPath(); g.moveTo(cx - t * 0.4, cy + i * t * 0.25); g.lineTo(cx + t * 0.4, cy + i * t * 0.25); g.stroke(); }
+    if (s.crop) { // 作物：越長越大，成熟時變成金黃色
+      const k = s.ready ? 1 : 0.35 + 0.2 * (s.stage || 0);
+      g.fillStyle = s.ready ? '#e8b84a' : '#5fae4a';
+      for (const dx of [-0.22, 0.22]) for (const dy of [-0.2, 0.2]) circle(g, cx + dx * t, cy + dy * t, t * 0.11 * k + 1);
+    }
   },
 };
 // 原型小鎮（crowd 模組）用的造型
@@ -148,10 +155,11 @@ export function createRenderer2D(canvas, { data, services }) {
       return;
     }
     const p = PRESETS[presetOf(e)];
+    const env = { today: services.time?.day }; // 畫圖用的額外資訊（渲染層不改任何遊戲狀態）
     const k = e.state?.max ? 0.4 + 0.6 * (e.state.left / e.state.max) : 1; // 資源越少畫越小
     const rot = (e.state?.rot ?? 0) * Math.PI / 2;
     if (p) {
-      if (k !== 1 || rot) { g.save(); g.translate(cx, cy); g.rotate(rot); g.scale(k, k); p(g, 0, 0, t, e); g.restore(); } else p(g, cx, cy, t, e);
+      if (k !== 1 || rot) { g.save(); g.translate(cx, cy); g.rotate(rot); g.scale(k, k); p(g, 0, 0, t, e, env); g.restore(); } else p(g, cx, cy, t, e, env);
     } else { g.fillStyle = '#777'; circle(g, cx, cy, t * 0.15); }
   }
 

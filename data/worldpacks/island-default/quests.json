@@ -246,6 +246,62 @@
       "rewards": {
         "points": 15
       }
+    },
+    {
+      "id": "first_seed",
+      "line": "main",
+      "title": "種下第一顆種子",
+      "description": "阿福的田在他家西北邊。走過去種下種子，記得澆水！",
+      "giver": "afu",
+      "requires": [
+        "welcome"
+      ],
+      "module": "farming",
+      "conditions": [
+        {
+          "type": "event",
+          "event": "farming:planted",
+          "count": 1,
+          "label": "種 1 次種子"
+        },
+        {
+          "type": "event",
+          "event": "farming:watered",
+          "count": 1,
+          "label": "澆 1 次水"
+        }
+      ],
+      "rewards": {
+        "items": [
+          {
+            "item": "wheat_seed",
+            "qty": 3
+          }
+        ],
+        "points": 10
+      }
+    },
+    {
+      "id": "first_crop",
+      "line": "main",
+      "title": "第一次收成",
+      "description": "每天澆水，作物會慢慢長大。成熟了就收成吧！",
+      "giver": "afu",
+      "requires": [
+        "first_seed"
+      ],
+      "module": "farming",
+      "conditions": [
+        {
+          "type": "event",
+          "event": "farming:harvested",
+          "count": 1,
+          "label": "收成 1 次"
+        }
+      ],
+      "rewards": {
+        "points": 15
+      }
     }
   ]
 }
