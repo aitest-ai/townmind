@@ -23,8 +23,11 @@
 //   ctx.registerSystem({ id, order, update(dt) })       每個遊戲更新呼叫，order 小的先跑
 //   ctx.registerCommand(def)                            見 commands.js
 //   ctx.registerSaveSlice({ key, version, serialize, deserialize })
-//   ctx.registerPanel({ id, title, order, mount(el) })  介面面板（由 UI 外殼決定怎麼放）
-//   ctx.registerEntityKind(kind, handler)               實體種類的行為
+//   ctx.registerPanel({ id, title, order, placement, view(call) })  宣告式面板：view 回傳節點清單，由外殼統一繪製
+//                                                       （例外情況可改給 mount(el)，自己畫；不建議）
+//   ctx.registerEntityKind(kind, { label, interactions: [{ label, command, args(entity) }] })
+//                                                       實體種類與「互動」宣告：玩家走近時外殼會列出可用的互動
+//   ctx.registerAIContext(fn(call))                     提供給 AI 的島上現況（一兩句話），居民模組用 ctx.collectAIContext 取得
 //   ctx.runCommand(id, args, { as, actor })             呼叫指令（沒啟用的模組會回傳 ok:false，不會丟錯）
 //                                                       as：'system'（預設）或 'ai'（受 aiCallable 與 available 限制）
 //   ctx.checkCommand(id, args, { as, actor })           只檢查不執行
@@ -88,7 +91,17 @@ export class Engine {
         for (const [id, r] of this._rngs) if (this._rngStates[id]) { try { r.setState(this._rngStates[id]); } catch { /* 壞的狀態就重新開始 */ } }
       },
     });
-    for (const [name, svc] of Object.entries(services || {})) if (svc?.saveSlice) this.registerCoreSlice({ key: `core.${name}`, ...svc.saveSlice });
+    this._aiContexts = [];
+    for (const [name, svc] of Object.entries(services || {})) {
+      if (svc?.saveSlice) this.registerCoreSlice({ key: `core.${name}`, ...svc.saveSlice });
+      // 服務可以發核心事件（core: 開頭），例如時間服務的 core:dayStarted
+      svc?.bind?.({
+        emit: (ev, payload) => {
+          if (!String(ev).startsWith('core:')) throw new FrameworkError('EVENT_NAMESPACE', `核心服務「${name}」只能發 core: 開頭的事件，收到「${ev}」`);
+          return this.events.emit(ev, payload);
+        },
+      });
+    }
   }
 
   // 核心服務（時間、背包、實體……）的存檔切片。key 必須以「core.」開頭。
@@ -205,12 +218,14 @@ export class Engine {
   dispose() {
     for (const id of [...this._started].reverse()) {
       try { this._defs.get(id).dispose?.(this._ctxs.get(id)); } catch (e) { this._report(id, `關閉時出錯：${e.message}`, e); }
+      for (const svc of Object.values(this.services || {})) { try { svc?.onModuleDisposed?.(id); } catch { /* 忽略 */ } }
       for (const off of this._unsubs.get(id) || []) { try { off(); } catch { /* 忽略 */ } }
       this.commands.unregisterOwner(id);
     }
     this._systems = []; // 所有已啟動的模組都關閉了，它們註冊的東西一併清掉
     this._panels = [];
     this._kinds.clear();
+    this._aiContexts = [];
     this._slices.clear();
     this._unsubs.clear();
     this._apis.clear();
@@ -333,6 +348,65 @@ export class Engine {
   listPanels() { return [...this._panels].sort((a, b) => a.order - b.order || a.seq - b.seq); }
   entityKind(kind) { return this._kinds.get(kind)?.handler ?? null; }
 
+  // 宣告式面板：呼叫面板的 view(call) 取得節點清單，並替每個按鈕標上「現在能不能按、為什麼」。
+  // 節點型別見 ARCHITECTURE.md「宣告式面板」。出錯時回傳一個白話的錯誤節點，不會讓整個介面壞掉。
+  renderPanel(id, call = { source: 'player', actor: 'player' }) {
+    const p = this._panels.find((x) => x.id === id);
+    if (!p) return [{ type: 'text', text: '這個面板目前沒有開啟。' }];
+    if (typeof p.view !== 'function') return [];
+    let nodes;
+    try { nodes = p.view(call); } catch (e) {
+      this._report(p.owner, `面板「${p.title || id}」畫不出來：${e.message}`, e);
+      return [{ type: 'error', text: `「${p.title || id}」暫時無法顯示（${e.message}）` }];
+    }
+    const mark = (n) => {
+      if (!n || typeof n !== 'object') return null;
+      if (n.type === 'button' && n.command) {
+        const chk = this.commands.check(n.command, n.args || {}, { source: 'player', actor: 'player', ...call });
+        // 參數要從輸入框來的按鈕（argsFrom），先只看「能不能用」，參數到按下時再驗
+        const ok = n.argsFrom ? this.commands.availability(n.command, call).ok : chk.ok;
+        return { ...n, enabled: ok, reason: ok ? null : (n.argsFrom ? this.commands.availability(n.command, call).reason : chk.reason) };
+      }
+      if (Array.isArray(n.items) && n.type === 'buttons') return { ...n, items: n.items.map(mark).filter(Boolean) };
+      return n;
+    };
+    return (Array.isArray(nodes) ? nodes : []).map(mark).filter(Boolean);
+  }
+
+  // 某個實體此刻可以做的互動（給「互動」按鈕、觸控選單用）。
+  // 實體種類用 registerEntityKind(kind, { interactions: [{ label, command, args(entity) }] }) 宣告。
+  interactionsFor(entityId, call = { source: 'player', actor: 'player' }) {
+    const ent = this.services?.entities?.get?.(entityId);
+    if (!ent) return [];
+    const kind = this._kinds.get(ent.kind)?.handler;
+    const list = Array.isArray(kind?.interactions) ? kind.interactions : [];
+    const out = [];
+    for (const it of list) {
+      let args = {};
+      try {
+        if (it.when && !it.when(ent, call)) continue;
+        args = typeof it.args === 'function' ? it.args(ent, call) : { ...(it.args || {}) };
+      } catch (e) { this._report(this._kinds.get(ent.kind).owner, `互動「${it.label}」出錯：${e.message}`, e); continue; }
+      const chk = this.commands.check(it.command, args, { source: 'player', actor: 'player', ...call });
+      if (chk.code === 'NOT_FOUND') continue; // 模組沒開：互動直接不出現
+      out.push({ label: typeof it.label === 'function' ? it.label(ent) : it.label, command: it.command, args, ok: chk.ok, reason: chk.ok ? null : chk.reason });
+    }
+    return out;
+  }
+
+  // 收集各模組提供給 AI 的「島上現況」：[{ module, lines: [...] }]。只有已啟用的模組才會出現。
+  collectAIContext(call = {}) {
+    const out = [];
+    for (const c of this._aiContexts) {
+      try {
+        const r = c.fn(call);
+        const lines = (Array.isArray(r) ? r : r == null ? [] : [r]).map((x) => (typeof x === 'string' ? x : JSON.stringify(x))).filter(Boolean).map((x) => x.slice(0, 200));
+        if (lines.length) out.push({ module: c.owner, lines: lines.slice(0, 8) });
+      } catch (e) { this._report(c.owner, `提供給 AI 的現況出錯：${e.message}`, e); }
+    }
+    return out;
+  }
+
   // ---------- 內部 ----------
   _hasRef(of, id) {
     const list = this.data?.[of];
@@ -405,12 +479,22 @@ export class Engine {
       },
       registerPanel: (panel) => {
         if (!panel?.id) throw new FrameworkError('BAD_PANEL', `模組「${id}」的面板缺少 id`);
-        this._panels.push({ owner: id, order: 100, seq: this._seq++, ...panel });
+        if (panel.view !== undefined && typeof panel.view !== 'function') throw new FrameworkError('BAD_PANEL', `模組「${id}」的面板「${panel.id}」的 view 必須是 function`);
+        if (this._panels.some((p) => p.id === panel.id)) throw new FrameworkError('DUP_PANEL', `面板「${panel.id}」重複註冊`);
+        this._panels.push({ owner: id, order: 100, placement: 'side', seq: this._seq++, ...panel });
       },
-      registerEntityKind: (kind, handler) => {
+      registerEntityKind: (kind, handler = {}) => {
         if (this._kinds.has(kind)) throw new FrameworkError('DUP_KIND', `實體種類「${kind}」已被模組「${this._kinds.get(kind).owner}」註冊`);
+        for (const it of handler?.interactions || []) {
+          if (!it?.label || !it?.command) throw new FrameworkError('BAD_KIND', `實體種類「${kind}」的互動需要 label 與 command`);
+        }
         this._kinds.set(kind, { owner: id, handler });
       },
+      registerAIContext: (fn) => {
+        if (typeof fn !== 'function') throw new FrameworkError('BAD_AI_CONTEXT', `模組「${id}」的 registerAIContext 需要 function`);
+        this._aiContexts.push({ owner: id, fn });
+      },
+      collectAIContext: (call = {}) => this.collectAIContext(call),
       // as：'system'（預設）或 'ai'。模組只能降權（以 AI 身分受限執行），不能冒充玩家。
       runCommand: (cmdId, args, { as = 'system', actor = null } = {}) => {
         if (as !== 'system' && as !== 'ai') {

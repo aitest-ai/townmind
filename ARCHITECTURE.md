@@ -73,13 +73,21 @@ id 格式與唯一、參照完整、地圖尺寸與出生點、模組依賴與�
 6. **新增一個模組不應修改 `src/core`。** 若需要，代表核心介面不夠，請另開 PR 說明。
 7. 世界包資料與模組 config 在執行時是唯讀的（deep freeze）；要改的狀態由模組自己保存。
 
-## 8. 核心服務（由 WP0 補齊，以 services 注入）
-- `entities`：實體表（id、kind、位置、狀態），渲染層讀它；`registerEntityKind` 定義行為。
-- `time`：遊戲時間與天數，含課堂倍率（`timeScale`）。
-- `inventory`：背包與物品操作。
-- `storage`：存檔後端（localStorage／記憶體），可替換。
-- `input`、`camera`、`uiShell`：輸入、鏡頭、面板容器（面板由模組註冊，外殼決定擺放）。
-介面細節由 Code 在 WP0 依實作需要定案，但請保持「核心不依賴瀏覽器」。
+## 8. 核心服務（`src/core/services/`，以 services 注入，不依賴瀏覽器）
+`createCoreServices(packData)` 一次建好下列服務；外殼可替換任何一個。服務若帶 `saveSlice` 會自動存成 `core.<名稱>`，若有 `bind(core)` 可發 `core:` 事件。
+- `time`：遊戲時鐘（`day`、`minuteOfDay`、`season`、`isNight`、`clockText()`）。`advance(真實秒數)` 回傳遊戲秒數交給 `engine.update`。課堂模式＝把 `dayLengthSec` 調短，另有 `timeScale`、`pause()`、真實時鐘模式。換日發 `core:dayStarted`；`skipDays(n)` 供離線補算（事件帶 `offline: true`）。
+- `entities`：實體表 `{ id, kind, owner, ref, x, y, state }`，座標單位是「格」。渲染層只讀它。`move()` 不增加 `version`（避免每幀重建），結構變動才增加。模組關掉時，它擁有的實體自動從地圖移除；資料由模組自己的存檔切片保存（`snapshot(owner)`／`restore(owner, list)`）。只有 owner 為 `core` 的實體（例如玩家）由服務本身存檔。
+- `inventory`：每個擁有者一個背包，依 `items.json` 的 `stack` 疊加、`slots` 限制格數；`add` 滿了會少放而不丟錯；`removeAll` 全部夠才拿。發 `core:inventoryChanged`。
+- `textFilter`：玩家輸入過濾（`src/core/textfilter.js`）。
+- 瀏覽器相關（`storage`、`input`、`camera`、`uiShell`）放在 `src/shell/`，不在核心。
+
+## 8.1 實體互動、宣告式面板、AI 現況
+- **實體互動**：`ctx.registerEntityKind('tree', { label: '樹', interactions: [{ label: '砍樹', command: 'gathering.harvest', args: (e) => ({ target: e.id }) }] })`。
+  `engine.interactionsFor(entityId)` 回傳 `[{ label, command, args, ok, reason }]`；指令所屬模組沒開時，該互動直接不出現。外殼的「互動」按鈕只靠這個，新模組不需要改外殼。
+- **宣告式面板**：`ctx.registerPanel({ id, title, order, placement: 'side'|'hud', view(call) })`，`view` 回傳節點清單，`engine.renderPanel(id)` 會替按鈕標上 `enabled`／`reason`。節點型別：
+  `text { text }`、`stat { label, value }`、`bar { label, value: 0~1 }`、`list { items: [{ label, detail }] }`、`button { label, command, args, argsFrom? }`、`buttons { items }`、`input { name, label, maxLen, placeholder }`、`select { name, label, options: [{ value, label }] }`、`error { text }`。
+  `argsFrom: { text: 'inputName' }` 表示按下時把輸入框的值當參數。面板出錯只會顯示白話錯誤，不會拖垮介面。`mount(el)` 仍可用，但只在例外情況使用。
+- **AI 現況**：`ctx.registerAIContext((call) => ['田裡有 3 塊熟了'])`；居民模組用 `ctx.collectAIContext({ actor })` 取得 `[{ module, lines }]`（每模組最多 8 句、每句最多 200 字）。關掉模組，它的現況自動不再出現在提示詞裡。
 
 ## 9. 遷移計畫（原型 → 框架）
 - `residents` 模組：`src/brain.js`、`src/prompt.js`、`data/npcs.js` → 讀世界包 residents；提示詞的行動清單改用 `describeForAI()`；`api/decide.js` 保留。
