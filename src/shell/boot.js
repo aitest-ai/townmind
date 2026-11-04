@@ -125,6 +125,8 @@ async function boot() {
     prefs: createPrefs(`townmind:${data.pack.id}`), // 和存檔分開的設定（例如老師密碼），開新遊戲不會清掉
     now: () => Date.now() + (debug.clockOffset || 0),
     save: () => requestSave(),
+    // 這次開了哪些模組（例如任務模組用來略過需要沒開的模組的任務）
+    modules: { enabled: () => engine.enabledModules() },
     // 輸入（螢幕方向，長度 0～1）：給要自己控制角色的模組（例如競速時的滑板車）
     input: { vector: () => inputRef?.vector() ?? { x: 0, y: 0 }, cameraAngle: () => (current === '3d' ? (views['3d']?.azimuth?.() ?? 0) : 0) },
   };

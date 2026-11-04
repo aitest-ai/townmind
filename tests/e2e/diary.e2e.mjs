@@ -84,8 +84,10 @@ test('玩的時候過完一天：隔天看到昨天的日記', async () => {
     const t = window.__tm; const oak = t.services.entities.all().find((e) => e.ref === 'oak');
     t.services.entities.move('player', oak.x + 1, oak.y);
     t.engine.runCommand('gathering.harvest', { target: oak.id });
-    t.services.time.advance(720); t.engine.update(0.01);
   });
+  // 開了「行動與工具」：砍樹要花一點時間，等砍完再過一天
+  await page.waitForFunction(() => window.__tm.services.entities.all().some((e) => e.ref === 'oak' && e.state.depleted), null, { timeout: 15000 });
+  await page.evaluate(() => { window.__tm.services.time.advance(720); window.__tm.engine.update(0.01); });
   await page.waitForTimeout(400);
   assert.match(await page.textContent('[data-panel="quests-diary.diary"]'), /第 1 天・老橘.*採集了 1 次/s);
 });

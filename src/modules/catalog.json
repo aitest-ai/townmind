@@ -49,6 +49,21 @@
       "schema": true
     },
     {
+      "id": "quests",
+      "name": "任務與成長",
+      "status": "implemented",
+      "summary": "任務、任務鏈、完成條件、獎勵、解鎖旗標、小島繁榮度，全部由世界包 quests.json 定義；新玩法只要加任務資料（數它的事件）就能接上主線。",
+      "requires": [],
+      "optional": [],
+      "conflicts": [],
+      "needsData": [],
+      "provides": [
+        "quests",
+        "flags"
+      ],
+      "schema": true
+    },
+    {
       "id": "gathering",
       "name": "採集",
       "status": "implemented",
@@ -188,9 +203,9 @@
     },
     {
       "id": "quests-diary",
-      "name": "小請求與居民日記",
+      "name": "居民日記",
       "status": "prototype",
-      "summary": "居民日記（已完成：玩的時候記錄、離線時依模板與種子亂數補寫，不呼叫 AI）；小請求（之後再做）。",
+      "summary": "居民日記：玩的時候記錄、離線時依模板與種子亂數補寫，不呼叫 AI。（居民小請求在「好感度與送禮」模組。）",
       "requires": [],
       "optional": [
         "residents"

@@ -1,0 +1,170 @@
+{
+  "_說明": "任務與成長的資料。新玩法要接上主線：加一個任務，條件寫「數它的事件」即可。需要的模組沒開時，任務會被略過，主線照樣往下走。",
+  "levels": [
+    {
+      "level": 1,
+      "points": 0,
+      "name": "小小島"
+    },
+    {
+      "level": 2,
+      "points": 20,
+      "name": "熱鬧起來的小島",
+      "unlocks": [
+        "level2"
+      ]
+    },
+    {
+      "level": 3,
+      "points": 50,
+      "name": "有家的感覺",
+      "unlocks": [
+        "level3"
+      ]
+    },
+    {
+      "level": 4,
+      "points": 100,
+      "name": "大家都想來玩",
+      "unlocks": [
+        "level4"
+      ]
+    },
+    {
+      "level": 5,
+      "points": 180,
+      "name": "夢想中的小島",
+      "unlocks": [
+        "level5"
+      ]
+    }
+  ],
+  "quests": [
+    {
+      "id": "welcome",
+      "line": "main",
+      "title": "跟村長打招呼",
+      "description": "老橘在家門口等你，去跟他說聲你好吧！",
+      "giver": "laoju",
+      "module": "residents",
+      "conditions": [
+        {
+          "type": "event",
+          "event": "residents:greeted",
+          "match": {
+            "who": "laoju"
+          },
+          "count": 1,
+          "label": "和老橘打招呼"
+        }
+      ],
+      "rewards": {
+        "items": [
+          {
+            "item": "apple",
+            "qty": 2
+          }
+        ],
+        "points": 5
+      }
+    },
+    {
+      "id": "first_harvest",
+      "line": "main",
+      "title": "小島的第一份收穫",
+      "description": "在島上採集三次：砍樹、摘果子、撿貝殼都可以。",
+      "giver": "laoju",
+      "requires": [
+        "welcome"
+      ],
+      "module": "gathering",
+      "conditions": [
+        {
+          "type": "event",
+          "event": "gathering:harvested",
+          "count": 3,
+          "label": "採集 3 次"
+        }
+      ],
+      "rewards": {
+        "points": 10,
+        "flags": [
+          "can_craft"
+        ]
+      }
+    },
+    {
+      "id": "wood_for_laoju",
+      "line": "main",
+      "title": "幫村長準備木頭",
+      "description": "老橘想修理籬笆，需要 6 個木頭。",
+      "giver": "laoju",
+      "requires": [
+        "first_harvest"
+      ],
+      "conditions": [
+        {
+          "type": "have",
+          "item": "wood",
+          "qty": 6,
+          "consume": true,
+          "label": "交給老橘 6 個木頭"
+        }
+      ],
+      "rewards": {
+        "items": [
+          {
+            "item": "plank",
+            "qty": 2
+          }
+        ],
+        "points": 10
+      }
+    },
+    {
+      "id": "meet_everyone",
+      "line": "side",
+      "title": "認識新朋友",
+      "description": "跟島上的三位居民打招呼。",
+      "requires": [
+        "welcome"
+      ],
+      "module": "residents",
+      "conditions": [
+        {
+          "type": "event",
+          "event": "residents:greeted",
+          "count": 3,
+          "label": "跟居民打招呼 3 次"
+        }
+      ],
+      "rewards": {
+        "points": 5
+      }
+    },
+    {
+      "id": "collector",
+      "line": "side",
+      "title": "小小收藏家",
+      "description": "在海邊撿 2 個貝殼。",
+      "requires": [
+        "first_harvest"
+      ],
+      "module": "gathering",
+      "conditions": [
+        {
+          "type": "event",
+          "event": "gathering:harvested",
+          "match": {
+            "species": "shell"
+          },
+          "count": 2,
+          "label": "撿貝殼 2 次"
+        }
+      ],
+      "rewards": {
+        "points": 5
+      }
+    }
+  ]
+}
