@@ -9,8 +9,9 @@
 ## 目前狀態
 | 模組 | 狀態 | 備註 |
 | --- | --- | --- |
-| residents | planned | 原型在 `legacy/brain.js`、`legacy/prompt.js`，WP0 遷移中 |
-| crowd | planned | 原型在 `legacy/world.js`，WP0 遷移中 |
+| residents | prototype | 居民、規則腦（建議＋興趣加權）、公告、角色卡、家、散步、打招呼 |
+| crowd | prototype | 原型小鎮的群體小人（`?pack=prototype-town`） |
+| gathering | implemented | 砍樹、摘果、敲石頭、撿貝殼，會再生；第一個「不改核心」的新模組 |
 | 其他 | planned | 見 catalog.json |
 
-沒有「implemented」的模組，是因為第一批模組（含遷移）就是 WP0 的工作。
+新增模組的範例請看 `gathering/`：只新增這個資料夾、改 catalog 的狀態，沒有動到 `src/core`、外殼或渲染層。
