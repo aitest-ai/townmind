@@ -235,6 +235,15 @@ function makeSmallAnimal() {
   return g;
 }
 
+function makeShop() { // 商店攤位：櫃台＋紅白條紋遮陽棚
+  const g = new THREE.Group();
+  const counter = new THREE.Mesh(new THREE.BoxGeometry(2.2, 1.0, 1.0), std(0xc99a5b)); counter.position.y = 0.5; g.add(counter);
+  for (const x of [-1.0, 1.0]) { const p = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.07, 2.4, 6), std(0x8a6440)); p.position.set(x, 1.2, -0.4); g.add(p); }
+  for (let i = 0; i < 6; i++) { const s = new THREE.Mesh(new THREE.BoxGeometry(0.42, 0.08, 1.4), std(i % 2 ? 0xf5f0e6 : 0xe0574a)); s.position.set(-1.05 + i * 0.42, 2.4, 0); s.rotation.x = 0.25; g.add(s); }
+  g.traverse((o) => { if (o.isMesh) o.castShadow = true; });
+  return g;
+}
+
 function makeUnknown() {
   const g = new THREE.Group();
   const m = new THREE.Mesh(new THREE.SphereGeometry(0.4, 8, 6), std(0x888888)); m.position.y = 0.4; g.add(m);
@@ -376,6 +385,7 @@ export async function createRenderer3D(canvas, { data, services, lowPower = fals
       case 'bug': rec.part = makeBug(false); break;
       case 'bug_flying': rec.part = makeBug(true); break;
       case 'animal_small': rec.part = makeSmallAnimal(); break;
+      case 'shop': rec.part = makeShop(); break;
       case 'fence': rec.part = makeFence(); break;
       case 'chair': rec.part = makeChair(); break;
       case 'table': rec.part = makeTable(); break;

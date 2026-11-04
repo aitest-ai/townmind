@@ -46,7 +46,7 @@
       "config": {}
     },
     "economy": {
-      "enabled": false,
+      "enabled": true,
       "config": {}
     },
     "weather-seasons": {

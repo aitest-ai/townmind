@@ -282,6 +282,12 @@
       "ref": "shell",
       "x": 28,
       "y": 10
+    },
+    {
+      "type": "shop",
+      "ref": "general_store",
+      "x": 19,
+      "y": 18
     }
   ],
   "regions": [
