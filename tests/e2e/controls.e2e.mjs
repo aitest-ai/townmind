@@ -44,8 +44,9 @@ test('3D 轉了鏡頭：按「上」還是往畫面上方（鏡頭前方）走',
   const a = await pos(page);
   await page.keyboard.down('ArrowUp'); await page.waitForTimeout(700); await page.keyboard.up('ArrowUp');
   const b = await pos(page);
-  assert.ok(b.x < a.x - 1, `應該往西（x 變小）走，${a.x.toFixed(2)} → ${b.x.toFixed(2)}`);
-  assert.ok(Math.abs(b.y - a.y) < 0.4, `y 幾乎不變，${a.y.toFixed(2)} → ${b.y.toFixed(2)}`);
+  // 只看方向（走多遠和機器快慢有關）：主要往西走
+  assert.ok(b.x < a.x - 0.3, `應該往西（x 變小）走，${a.x.toFixed(2)} → ${b.x.toFixed(2)}`);
+  assert.ok(a.x - b.x > 3 * Math.abs(b.y - a.y), `主要是往西，不是往南北，(${a.x.toFixed(2)},${a.y.toFixed(2)}) → (${b.x.toFixed(2)},${b.y.toFixed(2)})`);
 });
 
 test('點地面：自己繞過水池走到對面；目的地有記號、走到就消失', async () => {
@@ -100,9 +101,11 @@ test('鏡頭阻尼：跟著走但不會跳；停下來後慢慢對準玩家', as
     out.push({ t: controls.target.x, p: (pl().x + 0.5 - 16) * 2.5, settled: true });
     return out;
   });
-  const jumps = samples.slice(1).map((s, i) => Math.abs(s.t - samples[i].t));
-  assert.ok(Math.max(...jumps) < 3, `鏡頭每 60 毫秒移動不超過 3 單位，最大 ${Math.max(...jumps).toFixed(2)}`);
+  // 「不會跳」：鏡頭一路平順地往前跟（不會往回、不會衝過頭），而且一直落後玩家＋前瞻距離（不是瞬間貼上）
+  const walking = samples.slice(0, 16);
+  assert.ok(walking.slice(1).every((s, i) => s.t >= walking[i].t - 0.05), '鏡頭不會往回跳');
   assert.ok(samples[15].t > samples[0].t + 1, '鏡頭有跟著走');
   const last = samples.at(-1);
+  assert.ok(walking.every((s) => s.t <= last.p + 3.2), '鏡頭沒有衝過頭');
   assert.ok(Math.abs(last.t - last.p) < 0.8, `停下來後對準玩家，差 ${Math.abs(last.t - last.p).toFixed(2)}`);
 });

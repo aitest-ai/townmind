@@ -20,7 +20,8 @@ test('主線：跟村長打招呼 → 領獎 → 下一個任務', async () => {
   await page.waitForSelector(`${Q} button:has-text("領取獎勵：跟村長打招呼")`);
   await page.screenshot({ path: join(SHOTS, 'pr12-quest-ready.png') });
   await page.click(`${Q} button:has-text("領取獎勵")`);
-  await page.waitForSelector('#feedback .fb:has-text("領到獎勵")');
+  // 領獎時會一次開放好幾個新任務，畫面上的回饋小字很快被擠掉：改看外殼的回饋紀錄
+  await page.waitForFunction(() => window.__tm.feedback.some((f) => f.module === 'quests' && /領到獎勵/.test(f.text)));
   await page.waitForSelector(`${Q}:has-text("小島的第一份收穫")`);
   assert.match(await page.textContent(Q), /（5 \/ 20）/);
   assert.match(await page.textContent('[data-panel="shell.bag"]'), /蘋果 × 2/);

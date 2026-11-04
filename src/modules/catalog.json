@@ -175,15 +175,16 @@
     {
       "id": "weather-seasons",
       "name": "天氣與季節",
-      "status": "planned",
-      "summary": "日夜、天氣、四季；影響作物、捕捉與氣氛。",
+      "status": "implemented",
+      "summary": "每天的天氣（依季節權重、可重現）、明天預報、換季提醒；下雨時發事件讓田自動澆水。季節本身來自核心時間，關掉天氣模組季節照樣運作。",
       "requires": [],
       "optional": [],
       "conflicts": [],
       "needsData": [],
       "provides": [
         "weather"
-      ]
+      ],
+      "schema": true
     },
     {
       "id": "social",

@@ -67,7 +67,8 @@ async function boot() {
   const overrides = parseOverrides(params.get('mods') || '');
   try {
     const packJson = await fetchJson(`data/worldpacks/${PACK_ID}/pack.json`);
-    const willEnable = new Set(resolveEnabled(packJson.modules, overrides).enabled);
+    // 要讀的資料檔：世界包有開的模組＋網址開的模組（網址關掉的模組，資料也照樣讀，世界包檢查才不會說缺資料）
+    const willEnable = new Set([...resolveEnabled(packJson.modules, {}).enabled, ...resolveEnabled(packJson.modules, overrides).enabled]);
     data = await loadPack((name) => (name === 'pack' ? packJson : fetchJson(`data/worldpacks/${PACK_ID}/${name}.json`)), { schemas: schemas.filter((s) => willEnable.has(s.module)) });
     for (const f of ['art', 'text']) if (!data[f] || typeof data[f] !== 'object') data[f] = {};
   } catch (e) {

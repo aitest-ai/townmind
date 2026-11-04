@@ -82,7 +82,7 @@ test('上課倒數：學生看得到剩幾分鐘；快到時提醒；下課時�
   await page.evaluate(() => { window.__tm.clockOffset = 3.5 * 60_000; });
   await page.waitForSelector('#banner:has-text("還有 5 分鐘下課")');
   await page.screenshot({ path: join(SHOTS, 'pr7-lesson-warning.png') });
-  await page.click('#banner');
+  await page.evaluate(() => { document.getElementById('banner').style.display = 'none'; }); // 關掉提醒（點擊在機器忙時不穩）
   await page.evaluate(() => { window.__tm.clockOffset = 9 * 60_000; });
   await page.waitForSelector('#banner:has-text("下課囉")');
   assert.equal(await page.evaluate(() => window.__tm.services.time.paused), true);

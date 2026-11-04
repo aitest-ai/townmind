@@ -16,8 +16,12 @@ export async function setup() {
   const browser = await chromium.launch({ args: ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader'] });
   await mkdir(SHOTS, { recursive: true });
   const base = `http://localhost:${port}`;
-  const newPage = async (path, { width = 1280, height = 860, scale = 1, ...opts } = {}) => {
+  // 每開一個新頁面，就關掉之前測試留下的頁面：否則舊頁面會在背景一直畫 3D，機器越跑越忙、測試變得不穩
+  const open = [];
+  const newPage = async (path, { width = 1280, height = 860, scale = 1, keepOthers = false, ...opts } = {}) => {
+    if (!keepOthers) while (open.length) await open.pop().close().catch(() => {});
     const ctx = await browser.newContext({ viewport: { width, height }, deviceScaleFactor: scale, ...opts });
+    open.push(ctx);
     const page = await ctx.newPage();
     page.errors = [];
     page.on('pageerror', (e) => page.errors.push(e.message));
