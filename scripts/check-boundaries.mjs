@@ -6,14 +6,17 @@
 //     這樣核心才能在 Node 裡完整測試；瀏覽器的能力一律由 services 注入。
 //  2. src/render*（畫面層）不可 import src/modules，畫面只讀核心的資料。
 //  3. src/modules/<A> 只能 import：自己、src/core、以及「在 catalog.json 宣告為 requires 或 optional」的模組 B，
-//     而且只能 import B 的 index.js（不可深入 B 的內部檔案）。模組不可 import 渲染層或 three。
+//     而且只能 import B 的 index.js（不可深入 B 的內部檔案）。模組不可 import 渲染層、three 或 src 以外的檔案。
+//  4. 核心與模組都不可直接使用瀏覽器 API（document、window、localStorage、fetch、requestAnimationFrame……），
+//     一律由 services 注入，這樣才能在 Node 裡完整測試，也才能換平台。
 import { readdir, readFile, stat } from 'node:fs/promises';
 import { join, relative, resolve, dirname, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const JS = /\.(m?js)$/;
 const IMPORT = /(?:from\s+|import\s*\(\s*|import\s+)['"]([^'"]+)['"]/g;
-const BROWSER_API = /\b(document\.|window\.|localStorage|sessionStorage|navigator\.)/;
+const BROWSER_API = /(?<![.\w$])(?:(?:document|window|globalThis|navigator|location|localStorage|sessionStorage|indexedDB|caches)\s*[.[]|(?:fetch|requestAnimationFrame|cancelAnimationFrame|alert|confirm|prompt|importScripts)\s*\(|new\s+(?:XMLHttpRequest|WebSocket|Worker|Image|Audio|AudioContext|EventSource|BroadcastChannel)\b|(?:localStorage|sessionStorage|indexedDB)\b)/;
+const browserHit = (text) => stripStrings(stripComments(text)).match(BROWSER_API)?.[0]?.trim();
 
 async function walk(dir) {
   const out = [];
@@ -28,6 +31,8 @@ async function walk(dir) {
 }
 
 const stripComments = (s) => s.replace(/\/\*[\s\S]*?\*\//g, '').replace(/(^|[^:])\/\/.*$/gm, '$1');
+// 去掉字串內容（避免「請不要用 window」這類中文說明被誤判），保留引號本身
+const stripStrings = (s) => s.replace(/'(?:\\.|[^'\\\n])*'|"(?:\\.|[^"\\\n])*"|`(?:\\.|[^`\\])*`/g, (m) => m[0] + m[0]);
 
 export async function checkBoundaries(root, catalog = null) {
   const errors = [];
@@ -52,7 +57,8 @@ export async function checkBoundaries(root, catalog = null) {
         if (r[0] === '..') E(f, `核心不可 import src 以外的檔案（${s}）。`);
       }
     }
-    if (BROWSER_API.test(stripComments(text))) E(f, '核心不可直接使用瀏覽器 API（document、window、localStorage…）。請改由 services 注入。');
+    const hit = browserHit(text);
+    if (hit) E(f, `核心不可直接使用瀏覽器 API（${hit}）。請改由 services 注入。`);
   }
 
   // 2. 渲染層
@@ -77,7 +83,10 @@ export async function checkBoundaries(root, catalog = null) {
     const allowed = new Set([...(cat.get(id)?.requires || []), ...(cat.get(id)?.optional || [])]);
     if (catalog && !cat.has(id)) errors.push(`[src/modules/${id}] 這個模組沒有登記在 src/modules/catalog.json，請先登記（含 requires、optional、needsData）。`);
     for (const f of await walk(join(modRoot, id))) {
-      for (const s of specsOf(await readFile(f, 'utf8'))) {
+      const text = await readFile(f, 'utf8');
+      const hit = browserHit(text);
+      if (hit) E(f, `模組不可直接使用瀏覽器 API（${hit}）。請改用 ctx.services 提供的服務，模組才能在 Node 測試。`);
+      for (const s of specsOf(text)) {
         if (isThree(s)) { E(f, `模組不可使用 three（${s}）。畫面由渲染層負責。`); continue; }
         if (!s.startsWith('.')) continue;
         const target = resolve(dirname(f), s);
@@ -88,7 +97,8 @@ export async function checkBoundaries(root, catalog = null) {
           const last = r.slice(2).join('/');
           if (last !== 'index.js' && last !== 'index.mjs' && last !== '') E(f, `模組「${id}」深入引用了「${r[1]}」的內部檔案（${s}）。只能引用它的 index.js，其他模組要透過 ctx.getModule 取得公開 api。`);
         }
-        if (r[0] !== 'core' && r[0] !== 'modules' && !r[0]?.startsWith('render') && r[0] !== '..') E(f, `模組只能引用 core 與其他已宣告的模組，不可引用 src/${r[0]}（${s}）。`);
+        if (r[0] === '..') E(f, `模組不可引用 src 以外的檔案（${s}）。資料請放在世界包，透過 ctx.data 取得。`);
+        else if (r[0] !== 'core' && r[0] !== 'modules' && !r[0]?.startsWith('render')) E(f, `模組只能引用 core 與其他已宣告的模組，不可引用 src/${r[0]}（${s}）。`);
       }
     }
   }
