@@ -2,16 +2,17 @@
 // 有錯誤時結束碼為 1。訊息是白話中文，說明哪個檔案、哪一筆、怎麼修。
 import { basename } from 'node:path';
 import { validatePack } from '../src/core/worldpack.js';
-import { readPackDir, readCatalog, listPackDirs } from './pack-io.mjs';
+import { readPackDir, readCatalog, listPackDirs, readSchemas } from './pack-io.mjs';
 
 const dirs = process.argv[2] ? [process.argv[2]] : await listPackDirs();
 const catalog = await readCatalog();
+const schemas = await readSchemas();
 let failed = false;
 
 for (const dir of dirs) {
   let result;
   try {
-    result = validatePack(await readPackDir(dir), catalog);
+    result = validatePack(await readPackDir(dir, schemas), catalog, schemas);
   } catch (e) {
     console.log(`✘ ${basename(dir)}：${e.message}`);
     failed = true;

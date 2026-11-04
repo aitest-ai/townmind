@@ -23,11 +23,15 @@
 //   ctx.registerSaveSlice({ key, version, serialize, deserialize })
 //   ctx.registerPanel({ id, title, order, mount(el) })  介面面板（由 UI 外殼決定怎麼放）
 //   ctx.registerEntityKind(kind, handler)               實體種類的行為
-//   ctx.runCommand(id, args)                            呼叫指令（沒啟用的模組會回傳 ok:false，不會丟錯）
+//   ctx.runCommand(id, args, { as, actor })             呼叫指令（沒啟用的模組會回傳 ok:false，不會丟錯）
+//                                                       as：'system'（預設）或 'ai'（受 aiCallable 與 available 限制）
+//   ctx.checkCommand(id, args, { as, actor })           只檢查不執行
+//   ctx.describeCommandsForAI({ actor })                此刻這位居民可以做的行動清單（給提示詞與規則腦）
 //   ctx.log(...)
 import { EventBus } from './events.js';
 import { CommandRegistry } from './commands.js';
 import { FrameworkError } from './errors.js';
+import { defaultTextFilter } from './textfilter.js';
 
 const MODULE_ID = /^[a-z][a-z0-9-]*$/;
 const MAX_SYSTEM_ERRORS = 3;
@@ -39,7 +43,13 @@ export class Engine {
     this.onError = onError;
     this._log = log;
     this.events = new EventBus((name, e) => this._report('core', `事件「${name}」的處理函式出錯：${e.message}`, e));
-    this.commands = new CommandRegistry({ hasRef: (of, id) => this._hasRef(of, id) });
+    this.commands = new CommandRegistry({
+      hasRef: (of, id) => this._hasRef(of, id),
+      getEntity: (id) => this.services?.entities?.get?.(id) ?? null,
+      textFilter: (text, opts) => (this.services?.textFilter ?? defaultTextFilter)(text, opts),
+      audience: data?.pack?.audience ?? 'general',
+      onRun: (info) => this.events.emit('core:commandRun', info),
+    });
     this._defs = new Map();
     this._started = [];
     this._apis = new Map();
@@ -151,6 +161,11 @@ export class Engine {
     this._apis.clear();
     this._ctxs.clear();
     this._started = [];
+  }
+
+  // 介面外殼（玩家）執行指令的入口。模組請用 ctx.runCommand。
+  runCommand(id, args = {}, call = {}) {
+    return this.commands.run(id, args, { source: 'player', actor: 'player', ...call, caller: null });
   }
 
   isEnabled(id) { return this._started.includes(id); }
@@ -280,7 +295,15 @@ export class Engine {
         if (this._kinds.has(kind)) throw new FrameworkError('DUP_KIND', `實體種類「${kind}」已被模組「${this._kinds.get(kind).owner}」註冊`);
         this._kinds.set(kind, { owner: id, handler });
       },
-      runCommand: (cmdId, args) => this.commands.run(cmdId, args, { source: 'system', ctx: this._ctxs.get(id) }),
+      // as：'system'（預設）或 'ai'。模組只能降權（以 AI 身分受限執行），不能冒充玩家。
+      runCommand: (cmdId, args, { as = 'system', actor = null } = {}) => {
+        if (as !== 'system' && as !== 'ai') {
+          throw new FrameworkError('BAD_SOURCE', `模組「${id}」只能用 system 或 ai 身分執行指令，收到「${as}」`, '玩家的操作由介面外殼送出，模組不能冒充玩家。');
+        }
+        return this.commands.run(cmdId, args, { source: as, actor, caller: id });
+      },
+      checkCommand: (cmdId, args, { as = 'system', actor = null } = {}) => this.commands.check(cmdId, args, { source: as === 'ai' ? 'ai' : 'system', actor, caller: id }),
+      describeCommandsForAI: ({ actor = null } = {}) => this.commands.describeForAI({ source: 'ai', actor, caller: id }),
     };
   }
 }

@@ -31,8 +31,15 @@ export default {
 系統（system）連續出錯 3 次只停用該系統並發出 `core:moduleError`，不拖垮整個遊戲。
 
 ## 4. 指令與 AI
-所有操作（玩家、介面按鈕、AI）走 `CommandRegistry`。指令名 `模組id.動作`，參數有型別驗證（int/string/enum/bool/ref，可 clamp/truncate），未宣告的參數會被丟掉。
-`aiCallable: true` 的指令才開放給 AI；`describeForAI()` 自動產生提示詞中的「允許行動清單」。**關掉一個模組，AI 自動不會再提到它。**
+所有操作（玩家、介面按鈕、AI）走 `CommandRegistry`。指令名 `模組id.動作`，參數有型別驗證（int/string/enum/bool/ref/entity，可 clamp/truncate），未宣告的參數會被丟掉。
+- **呼叫情境 call**：`{ source: 'player'|'ai'|'system', actor, caller }`，指令的 `run(args, call)` 會收到。玩家操作由外殼呼叫 `engine.runCommand()`（actor 為 `player`）。
+- **AI 受限執行**：模組用 `ctx.runCommand(id, args, { as: 'ai', actor })`，核心強制只能執行 `aiCallable` 的指令；模組只能降權，不能冒充玩家。
+- **此刻能不能做**：`available(call)` 與 `canRun(args, call)` 回傳 `true` 或一句白話原因。不可用的指令不會出現在 AI 清單，介面可用 `commands.check()` / `listFor()` 讓按鈕變灰並顯示原因。
+- **entity 參數**：`{ type: 'entity', kind: 'tree' }` 參照此刻地圖上存在的實體（經由 `services.entities.get`）。任何參數都可提供 `choices(call)`，作為給 AI 的候選值。
+- **userText**：`{ type: 'string', userText: true }` 代表玩家打的字，會先經過 `services.textFilter`（預設為 `src/core/textfilter.js` 的本機兒童向過濾），不通過就以白話拒絕。
+- **core:commandRun**：每次執行（成功或被拒）都會發出，供日記、小請求、重播使用。
+
+`aiCallable: true` 且 available 的指令才開放給 AI；`ctx.describeCommandsForAI({ actor })` 自動產生提示詞中的「允許行動清單」。**關掉一個模組，AI 自動不會再提到它。**
 
 ## 5. 存檔
 每個模組註冊自己的切片（key = 模組 id 或 `id.xxx`，整數 version，只存純 JSON）。
@@ -41,8 +48,11 @@ export default {
 - 預設存 localStorage，要有匯出／匯入。版本升級在 `deserialize(data, savedVersion)` 內處理。
 
 ## 6. 世界包
-`pack`（受眾、模組開關與設定、起始背包）、`items`、`species`、`recipes`、`residents`、`island`（ASCII 地圖、放置物、區域）、`art`、`text`。
-`npm run check` 驗證：id 格式與唯一、參照完整、地圖尺寸與出生點、模組依賴與所需資料、角色卡字數限制，以及**兒童版安全規則**（捕捉只允許 `catch_release`／`collect`／`photo`）。
+核心只認識 `pack`（受眾、模組開關與設定、起始背包）、`items`、`species`、`island`（ASCII 地圖、放置物、區域）、`art`、`text`，並只做通用檢查：
+id 格式與唯一、參照完整、地圖尺寸與出生點、模組依賴與所需資料，以及**兒童版安全政策**（任何資料裡的 `presentation` 只允許 `catch_release`／`collect`／`photo`）。
+
+其他一切屬於模組：每個模組資料夾可附 `schema.js`，宣告它擁有的資料檔（例如 crafting 的 `recipes`、racing 的 `tracks`）、使用的物種 kind、放置物 type，以及自己的資料檢查。
+`npm run check` 會收集所有 schema 一起檢查。**新增模組帶來新資料，不需要修改核心。**（規劃中的模組也先附 schema，作為它的資料契約。）
 功能開關：`pack.json` 的 `modules` 為預設，網址可覆寫，如 `?mods=farming=off,capture=on`。
 
 ## 7. 邊界規則（`scripts/check-boundaries.mjs`，CI 執行）
