@@ -17,6 +17,10 @@
         "workers": 24
       }
     },
+    "actions": {
+      "enabled": true,
+      "config": {}
+    },
     "gathering": {
       "enabled": true,
       "config": {}

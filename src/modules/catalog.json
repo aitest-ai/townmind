@@ -35,13 +35,28 @@
       ]
     },
     {
+      "id": "actions",
+      "name": "行動與工具",
+      "status": "implemented",
+      "summary": "裝備工具、有持續時間的動作（進度條）、成敗結果；其他玩法（採集、釣魚、製作……）用它做出「花一點時間做事」的手感。",
+      "requires": [],
+      "optional": [],
+      "conflicts": [],
+      "needsData": [],
+      "provides": [
+        "actions"
+      ],
+      "schema": true
+    },
+    {
       "id": "gathering",
       "name": "採集",
       "status": "implemented",
       "summary": "砍樹、摘果、挖石頭、撿貝殼；資源會隨天數再生。",
       "requires": [],
       "optional": [
-        "residents"
+        "residents",
+        "actions"
       ],
       "conflicts": [],
       "needsData": [
