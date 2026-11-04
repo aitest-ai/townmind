@@ -15,9 +15,16 @@ test('外殼啟動：沒有錯誤、顯示世界包標題、時間會走、有�
   const t0 = await page.evaluate(() => window.__tm.services.time.elapsed);
   await page.waitForTimeout(600);
   assert.ok(await page.evaluate(() => window.__tm.services.time.elapsed) > t0);
-  assert.ok(await page.isVisible('[data-panel="shell.save"]'));
   assert.match(await page.textContent('[data-panel="shell.bag"]'), /斧頭 × 1/);
-  assert.match(await page.textContent('[data-panel="shell.modules"]'), /還在製作中/);
+  // 玩家畫面不顯示「還在製作中」這類管理資訊；存檔與功能模組收在設定選單
+  await page.waitForTimeout(300);
+  assert.doesNotMatch(await page.innerText('body'), /製作中|沒有做好/); // innerText 只看畫面上看得到的字
+  assert.equal(await page.isVisible('[data-panel="shell.save"]'), false);
+  await page.click('#settingsBtn');
+  assert.ok(await page.isVisible('[data-panel="shell.save"]'));
+  assert.match(await page.textContent('[data-panel="shell.modules"]'), /還沒有做好/);
+  await page.screenshot({ path: join(SHOTS, 'pr10-settings.png') });
+  await page.click('#settingsClose');
   await page.screenshot({ path: join(SHOTS, 'pr3-shell.png') });
   assert.deepEqual(page.errors, []);
 });
@@ -71,6 +78,7 @@ async function test2(page) {
 test('網址可開啟世界包沒開的功能；未知功能白話略過', async () => {
   const page = await env.newPage('/?new=1&mods=nosuch=on');
   await env.waitRunning(page);
+  await page.click('#settingsBtn');
   assert.match(await page.textContent('[data-panel="shell.modules"]'), /「nosuch」不是已知的功能/);
 });
 

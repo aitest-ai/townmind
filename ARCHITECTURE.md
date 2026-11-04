@@ -114,11 +114,32 @@ id 格式與唯一、參照完整、地圖尺寸與出生點、模組依賴與�
 - 走近（2.2 格內）有互動的實體，畫面下方出現大按鈕（`engine.interactionsFor`）；不能做時按鈕上直接寫原因。空白鍵／E 執行第一個可用的互動。
 - `island.json` 的 `look`：`outside: 'forest'` 外圍畫森林，否則是海；`flowers: false` 不畫小花。
 
+## 9.0 回饋事件（給之後的畫面特效、音效、粒子）
+每個玩法模組在關鍵時刻發出 `<模組id>:feedback`（記得放進模組的 `emits`），格式固定：
+```js
+ctx.emit('farming:feedback', {
+  kind: 'success' | 'fail' | 'complete' | 'unlock' | 'progress',
+  text: '小麥收成了！',          // 給玩家看的一句話（繁體中文、兒童友善）
+  actor: 'player',              // 誰做的
+  at: { x, y },                 // 選填：發生在地圖哪裡（格子座標），特效可以出現在那裡
+  entity: 'plot.3',             // 選填：相關的實體
+  sound: 'harvest',             // 選填：音效名稱建議
+  quiet: false,                 // 選填：true 時外殼不顯示文字（只給特效、音效用）
+});
+```
+外殼會替每個已啟用的模組訂閱這個事件名稱，目前顯示一行小字；之後要加特效或音效，只要訂閱同一個事件，不必改任何玩法模組。
+「失敗」在這個遊戲裡只代表「這次沒成功」（例如魚跑掉了），不會扣東西，也沒有懲罰。
+
+## 9.1.1 面板位置與設定選單
+`registerPanel` 的 `placement`：`side`（右側，預設）、`hud`（畫面上方的小面板，例如動作進度）、`settings`（收在「⚙ 設定」選單裡）。
+存檔、老師控制台、功能模組清單都在設定選單；「哪些功能還沒做好」這類管理資訊只在設定選單裡看得到，玩家畫面不顯示。
+
 ## 9.2 外殼提供給模組的服務（不在核心）
 外殼在 `src/shell/boot.js` 建立 Engine 時，除了核心服務，還放入這些服務（模組用 `ctx.services.xxx?.()` 呼叫，沒有外殼時，例如在 Node 測試裡，就不存在）：
 - `notify(text, level)`：白話訊息寫進事件紀錄；`level: 'banner'` 顯示在畫面中央，`'toast'` 顯示提示。
-- `policy`：模組設定外殼要遵守的限制（`src/shell/policy.js`）：`playerTimeControl`、`maxSpeed`、`playerTyping`、`typingReason`、`playerSaveControl`。多個模組設定時取最嚴格的；模組關掉時自動清掉。
+- `policy`：模組設定外殼要遵守的限制（`src/shell/policy.js`）：`playerTimeControl`、`maxSpeed`、`playerTyping`、`typingReason`、`playerSaveControl`、`playerMovement`（false 時外殼不移動玩家，例如競速中由模組控制）。多個模組設定時取最嚴格的；模組關掉時自動清掉。
 - `now()`：真實時間（毫秒）。
+- `input`：`vector()` 目前的移動輸入（螢幕方向，長度 0～1）、`cameraAngle()` 3D 鏡頭水平角度；給要自己控制角色的模組（例如競速）。
 - `save()`：立刻存檔。
 - `prefs`：和存檔分開保存的設定（`get`／`set`），開新遊戲與匯入存檔都不會動到（例如老師密碼的雜湊值）。
 遊戲暫停時，外殼仍以 `dt = 0` 每秒呼叫系統幾次，所以「真實時間」的計時（例如上課倒數）不會停。

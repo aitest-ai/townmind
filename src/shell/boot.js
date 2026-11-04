@@ -8,7 +8,7 @@
 //   ?seed=123              指定亂數種子（測試用）
 import { Engine, FrameworkError, validatePack, loadPack, parseOverrides, resolveEnabled, createCoreServices, defaultTextFilter } from '../core/index.js';
 import { createStorage } from './storage.js';
-import { createPanelHost, toast, log, showFatal, banner, showDialog } from './ui.js';
+import { createPanelHost, toast, log, showFatal, banner, showDialog, floatText } from './ui.js';
 import { createPlayerController } from './player.js';
 import { attachInput } from './input.js';
 import { createPolicy } from './policy.js';
@@ -89,14 +89,16 @@ async function boot() {
   // 3. 決定要開的模組（世界包預設 + 網址覆寫），載入程式
   const { enabled, config } = resolveEnabled(data.pack.modules, overrides);
   const notices = [];
-  const toLoad = [], notYet = [];
+  const toLoad = [], notYet = [], adminLater = [];
   for (const id of enabled) {
     const c = cat.get(id);
-    if (!c) notices.push(`網址或世界包裡的「${id}」不是已知的功能，已略過。`);
+    if (!c) adminLater.push(`網址或世界包裡的「${id}」不是已知的功能，已略過。`);
     else if (c.status === 'planned' || c.status === 'deferred') notYet.push(c.name || id);
     else toLoad.push(id);
   }
-  if (notYet.length) notices.push(`有 ${notYet.length} 個功能還在製作中，這次先不開：${notYet.join('、')}。`);
+  // 管理資訊（例如哪些功能還沒做好）只放在「設定」裡給老師看，不打擾玩家
+  const adminNotes = [...adminLater];
+  if (notYet.length) adminNotes.push(`有 ${notYet.length} 個功能還沒有做好，這次沒有開啟：${notYet.join('、')}。`);
   const defs = [];
   for (const id of toLoad) {
     try { defs.push((await import(`../modules/${id}/index.js`)).default); } catch (e) {
@@ -123,7 +125,10 @@ async function boot() {
     prefs: createPrefs(`townmind:${data.pack.id}`), // 和存檔分開的設定（例如老師密碼），開新遊戲不會清掉
     now: () => Date.now() + (debug.clockOffset || 0),
     save: () => requestSave(),
+    // 輸入（螢幕方向，長度 0～1）：給要自己控制角色的模組（例如競速時的滑板車）
+    input: { vector: () => inputRef?.vector() ?? { x: 0, y: 0 }, cameraAngle: () => (current === '3d' ? (views['3d']?.azimuth?.() ?? 0) : 0) },
   };
+  let inputRef = null;
   services.textFilter = (text, opts) => (policy.get('playerTyping', true) === false
     ? { ok: false, reason: policy.get('typingReason', '現在不能打字喔') }
     : defaultTextFilter(text, opts));
@@ -218,7 +223,10 @@ async function boot() {
   $('loading').remove();
 
   // 9. 面板：外殼自己的面板 + 模組註冊的宣告式面板
+  // 面板放哪裡：placement 'side'（右側，預設）、'hud'（畫面上方）、'settings'（設定選單，給老師與管理用）
   const host = createPanelHost($('panels'));
+  const settingsHost = createPanelHost($('settingsPanels'));
+  const hudHost = createPanelHost($('hudPanels'));
   const SPEEDS = [{ value: '0', label: '暫停' }, { value: '1', label: '正常' }, { value: '2', label: '2 倍' }, { value: '4', label: '4 倍' }, { value: '8', label: '8 倍' }];
   const shellPanels = () => [
     { id: 'shell.status', title: '小島狀態', order: 0, nodes: [
@@ -230,11 +238,11 @@ async function boot() {
       { type: 'select', name: 'view', label: '畫面', options: [{ value: '3d', label: '3D 立體' }, { value: '2d', label: '2D 俯視' }], value: current, onChange: 'view' },
       ...(current === '3d' ? [{ type: 'text', text: '鏡頭：拖曳旋轉、兩指或右鍵平移、滾輪或兩指縮放。' }, { type: 'button', label: '重設鏡頭', action: 'camReset' }] : []),
     ] },
-    ...engine.listPanels().filter((p) => typeof p.view === 'function').map((p) => ({ id: p.id, title: p.title, order: p.order, nodes: engine.renderPanel(p.id) })),
+    ...engine.listPanels().filter((p) => typeof p.view === 'function').map((p) => ({ id: p.id, title: p.title, order: p.order, placement: p.placement || 'side', nodes: engine.renderPanel(p.id) })),
     { id: 'shell.bag', title: '背包', order: 900, nodes: [
       { type: 'list', items: inventory.list('player').map((s) => ({ label: `${s.name} × ${s.qty}` })), empty: '背包是空的' },
     ] },
-    { id: 'shell.save', title: '存檔', order: 950, nodes: [
+    { id: 'shell.save', title: '存檔', order: 950, placement: 'settings', nodes: [
       { type: 'text', text: storage.persistent ? '每 20 秒與關閉網頁時會自動存檔。' : '⚠ 這個瀏覽器不能長期保存（可能是無痕模式），請記得「匯出存檔」。' },
       { type: 'buttons', items: [
         { type: 'button', label: '立刻存檔', action: 'save', primary: true },
@@ -246,9 +254,10 @@ async function boot() {
         ] : []),
       ] },
     ] },
-    { id: 'shell.modules', title: '這次開啟的功能', order: 990, nodes: [
-      { type: 'list', items: engine.enabledModules().map((id) => ({ label: labels[id] || id })), empty: '目前沒有開啟任何功能模組' },
-      ...(notices.length ? [{ type: 'list', items: notices.map((n) => ({ label: n })) }] : []),
+    { id: 'shell.modules', title: '功能模組', order: 990, placement: 'settings', nodes: [
+      { type: 'text', text: '這次開啟的功能（可在世界包 pack.json 或網址 ?mods=功能=off 開關）：' },
+      { type: 'list', items: engine.enabledModules().map((id) => ({ label: labels[id] || id, detail: id })), empty: '目前沒有開啟任何功能模組' },
+      ...([...adminNotes, ...notices].length ? [{ type: 'list', items: [...adminNotes, ...notices].map((n) => ({ label: n })) }] : []),
     ] },
   ].sort((a, b) => a.order - b.order);
 
@@ -304,9 +313,23 @@ async function boot() {
     const now = performance.now();
     if (!force && now - lastPanels < 300) return;
     lastPanels = now;
-    host.update(shellPanels(), { onButton });
+    const all = shellPanels();
+    host.update(all.filter((p) => !p.placement || p.placement === 'side'), { onButton });
+    settingsHost.update(all.filter((p) => p.placement === 'settings'), { onButton });
+    hudHost.update(all.filter((p) => p.placement === 'hud' && p.nodes.length), { onButton });
     $('clock').textContent = time.clockText();
   };
+
+  // 回饋事件：每個模組在關鍵時刻發「<模組id>:feedback」（成功、失敗、完成、解鎖、進度）。
+  // 外殼目前只顯示一個小提示；之後畫面特效、音效、粒子都訂閱同一個事件即可，不必改模組。
+  const feedbackLog = [];
+  for (const id of engine.enabledModules()) {
+    engine.events.on(`${id}:feedback`, (fb) => {
+      feedbackLog.push({ module: id, ...fb });
+      if (feedbackLog.length > 100) feedbackLog.shift();
+      if (fb?.text && fb.quiet !== true) floatText(fb.text, fb.kind);
+    });
+  }
 
   // 模組錯誤 → 事件紀錄（白話）；指令被拒 → 不吵，按鈕旁已有原因
   engine.events.on('core:dayStarted', (d) => { if (!d.offline) log(`🌅 第 ${d.day} 天開始了`); });
@@ -347,7 +370,7 @@ async function boot() {
     }
   };
   const wantStick = params.get('joystick') === '1' || (params.get('joystick') !== '0' && matchMedia('(pointer: coarse)').matches);
-  const input = attachInput({
+  const input = inputRef = attachInput({
     stage: $('stage'), joystick: wantStick,
     onTap: (x, y) => { const p = views[current].toWorld(x, y); if (p && !player.setTarget(p.x, p.y)) toast('那裡走不過去喔', 'warn', 2500); },
     onInteract: () => { const it = hudItems.find((x) => x.ok); if (it) runInteraction(it); },
@@ -371,9 +394,9 @@ async function boot() {
     let rem = time.advance(dt);
     if (rem > 0) while (rem > 0) { const s = Math.min(rem, 0.25); engine.update(s); rem -= s; }
     else if (now - lastIdle > 250) { lastIdle = now; engine.update(0); } // 暫停時系統仍收到 dt=0（例如課堂計時要繼續走）
-    steer();
+    if (policy.get('playerMovement', true)) steer(); else if (wasSteering) { wasSteering = false; player.stop(); }
     // 玩家用真實經過的時間（平板掉幀時也不會變慢），切成小步避免穿過東西
-    for (let left = raw; left > 1e-4; left -= 1 / 30) player.update(Math.min(left, 1 / 30));
+    if (policy.get('playerMovement', true)) for (let left = raw; left > 1e-4; left -= 1 / 30) player.update(Math.min(left, 1 / 30));
     // 目的地記號：點地面後顯示一個小圈圈，走到就消失（外殼自己的實體，不存檔）
     const tgt = player.target;
     if (tgt) { if (!entities.get('shell.marker')) entities.add({ id: 'shell.marker', kind: 'marker', owner: 'shell', art: 'marker', x: tgt.x, y: tgt.y }); else entities.move('shell.marker', tgt.x, tgt.y); }
@@ -406,7 +429,7 @@ async function boot() {
   }
 
   Object.assign(debug, {
-    status: 'running', engine, services, data, views, player, input, hud: () => hudItems, get view() { return current; }, setView, storage, notices, saveNow, isNew,
+    status: 'running', engine, services, data, views, player, input, hud: () => hudItems, feedback: feedbackLog, adminNotes, get view() { return current; }, setView, storage, notices, saveNow, isNew,
     snapshot: () => ({ day: time.day, minute: Math.round(time.minuteOfDay), modules: engine.enabledModules(), entities: entities.all().length, bag: inventory.list('player') }),
   });
 }

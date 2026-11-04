@@ -159,7 +159,7 @@ export default {
       { type: 'button', label: `${label}：關`, command: cmdId, args: { allowed: false }, primary: !on },
     ] });
     ctx.registerPanel({
-      id: 'classroom.teacher', title: '老師控制台', order: 980,
+      id: 'classroom.teacher', title: '老師控制台', order: 980, placement: 'settings', // 收在設定選單裡
       view() {
         if (!pinIsSet()) {
           return [

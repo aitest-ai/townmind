@@ -55,6 +55,17 @@
   #fatal .hint { color:#555; }
   #banner { position:fixed; inset:0; display:none; flex-direction:column; align-items:center; justify-content:center; gap:10px; background:rgba(40,60,90,.55); color:#fff; font-size:clamp(24px, 5vw, 44px); font-weight:bold; text-align:center; z-index:25; padding:24px; cursor:pointer; }
   #banner small { font-size:16px; font-weight:normal; opacity:.85; }
+  #settings { position:fixed; top:0; right:0; bottom:0; width:min(420px, 100vw); background:var(--bg); border-left:1px solid var(--line); box-shadow:-6px 0 24px rgba(0,0,0,.12); z-index:22; overflow:auto; padding:12px; display:none; }
+  #settings.open { display:block; }
+  .settings-head { display:flex; align-items:center; justify-content:space-between; }
+  .settings-head h2 { margin:0; font-size:18px; }
+  #hudPanels { position:absolute; top:44px; left:50%; transform:translateX(-50%); display:flex; gap:8px; z-index:2; pointer-events:none; }
+  #hudPanels .panel { margin:0; padding:6px 12px; background:rgba(255,255,255,.92); min-width:200px; }
+  #hudPanels .panel h2 { font-size:13px; margin:0 0 2px; }
+  #feedback { position:absolute; top:96px; left:50%; transform:translateX(-50%); display:flex; flex-direction:column; align-items:center; gap:4px; pointer-events:none; z-index:2; }
+  .fb { background:rgba(255,255,255,.94); border-radius:999px; padding:4px 14px; font-weight:bold; box-shadow:0 2px 8px rgba(0,0,0,.12); animation: fbUp 2.6s ease-out forwards; }
+  .fb-fail { color:#8a5a00; } .fb-complete, .fb-unlock { color:#2e6b2f; }
+  @keyframes fbUp { 0% { opacity:0; transform:translateY(8px); } 10% { opacity:1; transform:none; } 80% { opacity:1; } 100% { opacity:0; transform:translateY(-12px); } }
   #loading { position:absolute; inset:0; display:flex; align-items:center; justify-content:center; color:#456; font-size:16px; }
 </style>
 </head>
@@ -63,6 +74,7 @@
   <h1 id="title">小島日常</h1>
   <span id="clock">載入中…</span>
   <span id="packName"></span>
+  <button id="settingsBtn" aria-label="設定" style="margin-left:auto">⚙ 設定</button>
 </header>
 <main>
   <section>
@@ -71,6 +83,8 @@
       <canvas id="view2d" style="display:none"></canvas>
       <canvas id="view3d" style="display:none; cursor:grab"></canvas>
       <div id="help">點地面走過去（會自己繞路），或用搖桿、方向鍵／WASD。走近居民或樹就能互動（空白鍵）。</div>
+      <div id="hudPanels"></div>
+      <div id="feedback" aria-live="polite"></div>
       <div id="hud"></div>
     </div>
     <div class="panel" style="margin-top:10px">
@@ -80,8 +94,18 @@
   </section>
   <aside id="panels"></aside>
 </main>
+<div id="settings" role="dialog" aria-label="設定">
+  <div class="settings-head"><h2>設定</h2><button id="settingsClose">關閉</button></div>
+  <p class="hint">存檔、老師控制台、功能模組都在這裡。</p>
+  <div id="settingsPanels"></div>
+</div>
 <div id="toasts" aria-live="polite"></div>
 <div id="fatal" role="alertdialog"><div class="box"></div></div>
+<script>
+  // 設定選單的開關（不依賴遊戲程式，載入失敗時也能打開）
+  document.getElementById('settingsBtn').onclick = () => document.getElementById('settings').classList.toggle('open');
+  document.getElementById('settingsClose').onclick = () => document.getElementById('settings').classList.remove('open');
+</script>
 <script type="module" src="./src/shell/boot.js"></script>
 </body>
 </html>
