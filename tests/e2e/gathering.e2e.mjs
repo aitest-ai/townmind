@@ -19,8 +19,12 @@ test('採集：走近橡樹 → 「砍樹」按鈕 → 得到木頭；採過的�
   await page.waitForSelector('#hud button:has-text("砍樹")');
   await page.screenshot({ path: join(SHOTS, 'pr6-chop-button.png') });
   await page.click('#hud button:has-text("砍樹")');
-  await page.waitForTimeout(400);
-  assert.match(await page.textContent('#log'), /🪓 你砍了橡樹，得到 木頭 ×3/);
+  // 開了「行動與工具」：砍樹要花一點時間，畫面上方有進度條
+  await page.waitForSelector('[data-panel="actions.progress"] .p-bar');
+  await page.screenshot({ path: join(SHOTS, 'pr11-action-progress.png') });
+  await page.waitForFunction(() => /你砍了橡樹，得到 木頭 ×3/.test(document.getElementById('log').textContent), null, { timeout: 15000 });
+  await page.waitForSelector('#feedback .fb:has-text("得到 木頭 ×3")');
+  await page.screenshot({ path: join(SHOTS, 'pr11-feedback.png') });
   assert.match(await page.textContent('[data-panel="shell.bag"]'), /木頭 × 3/);
   assert.match(await page.textContent('[data-panel="gathering.status"]'), /橡樹：可以採 11／12/);
   await page.waitForTimeout(400);
@@ -42,8 +46,9 @@ test('?mods=gathering=off：樹、按鈕、面板都消失；開回來時之前�
     const t = window.__tm; const oak = t.services.entities.all().find((e) => e.ref === 'oak');
     t.services.entities.move('player', oak.x + 1, oak.y);
     t.engine.runCommand('gathering.harvest', { target: oak.id });
-    t.saveNow();
   });
+  await page.waitForFunction(() => window.__tm.services.entities.all().some((e) => e.ref === 'oak' && e.state.depleted), null, { timeout: 15000 });
+  await page.evaluate(() => window.__tm.saveNow());
   await page.goto(env.base + '/?view=2d&mods=gathering=off');
   await env.waitRunning(page);
   const off = await page.evaluate(() => window.__tm.services.entities.all().filter((e) => e.owner === 'gathering').length);

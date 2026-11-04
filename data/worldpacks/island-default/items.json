@@ -102,7 +102,8 @@
     "name": "斧頭",
     "category": "tool",
     "stack": 1,
-    "value": 0
+    "value": 0,
+    "toolSpeed": 1.0
   },
   {
     "id": "hoe",
@@ -123,7 +124,8 @@
     "name": "釣竿",
     "category": "tool",
     "stack": 1,
-    "value": 0
+    "value": 0,
+    "toolSpeed": 1.0
   },
   {
     "id": "camera",

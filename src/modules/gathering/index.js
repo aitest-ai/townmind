@@ -15,10 +15,11 @@ export default {
   id: 'gathering',
   version: '0.1.0',
   requires: [],
-  optional: ['residents'],
+  optional: ['residents', 'actions'],
   conflicts: [],
-  emits: ['gathering:harvested', 'gathering:regrown'],
-  config: { reach: 2.2, toolsByKind: { tree: 'axe' } },
+  emits: ['gathering:harvested', 'gathering:regrown', 'gathering:feedback'],
+  // seconds：開了「行動與工具」時，採集要花多久（物種可以用 actionSeconds 自己指定）
+  config: { reach: 2.2, toolsByKind: { tree: 'axe' }, seconds: { tree: 1.4, rock: 1.4, bush: 0.8, forage: 0.5 } },
 
   init(ctx) {
     const { entities, inventory, time } = ctx.services;
@@ -60,9 +61,26 @@ export default {
         const tool = toolFor(sp);
         if (tool && !inventory.has(call.actor, tool)) return `需要${inventory.itemName(tool)}`;
         if (!roomFor(call.actor, sp)) return '背包滿了，先整理一下吧';
+        if (ctx.getModule('actions')?.busy(call.actor)) return '手上還在忙';
         return true;
       },
+      // 有「行動與工具」：變成要花一點時間的動作（走開會中斷）；沒有：馬上採到
       run({ target }, call) {
+        const actions = ctx.getModule('actions');
+        const ent = entities.get(target), sp = species.get(ent.ref);
+        if (!actions) return giveYield(target, call.actor);
+        const r = actions.start(call.actor, {
+          label: species.get(ent.ref)?.actionLabel ?? VERB[sp.kind], seconds: sp.actionSeconds ?? ctx.config.seconds?.[sp.kind] ?? 1,
+          tool: toolFor(sp), at: { x: ent.x, y: ent.y },
+          onDone: ({ ok }) => { if (ok && !entities.get(target)?.state.depleted) giveYield(target, call.actor); },
+        });
+        return r.ok ? { started: true } : { started: false, reason: r.reason };
+      },
+    });
+
+    function giveYield(target, actor) {
+      const call = { actor };
+      {
         const ent = entities.get(target), sp = species.get(ent.ref);
         const got = [];
         for (const s of sp.yield) {
@@ -74,9 +92,10 @@ export default {
         const text = got.map((g) => `${inventory.itemName(g.item)} ×${g.qty}`).join('、');
         notify(`${sp.kind === 'tree' ? '🪓' : sp.kind === 'rock' ? '⛏️' : '🧺'} ${nameOf(call.actor)}${DONE[sp.kind]}${sp.name}，得到 ${text}`);
         ctx.emit('gathering:harvested', { actor: call.actor, species: sp.id, items: got, target });
+        ctx.emit('gathering:feedback', { kind: 'success', text: `得到 ${text}`, actor: call.actor, at: { x: ent.x, y: ent.y }, entity: target, sound: sp.kind === 'tree' ? 'chop' : 'pick', quiet: call.actor !== 'player' });
         return { items: got, regrowDay };
-      },
-    });
+      }
+    }
 
     for (const kind of KINDS) {
       ctx.registerEntityKind(kind, {
