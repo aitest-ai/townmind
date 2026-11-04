@@ -165,6 +165,65 @@
       "rewards": {
         "points": 5
       }
+    },
+    {
+      "id": "first_plank",
+      "line": "main",
+      "title": "做出第一塊木板",
+      "description": "打開「製作」面板，用 2 個木頭做 1 塊木板。",
+      "giver": "xiaogai",
+      "requires": [
+        "wood_for_laoju"
+      ],
+      "module": "crafting",
+      "conditions": [
+        {
+          "type": "event",
+          "event": "crafting:crafted",
+          "match": {
+            "recipe": "plank"
+          },
+          "count": 1,
+          "label": "做 1 塊木板"
+        }
+      ],
+      "rewards": {
+        "points": 10,
+        "flags": [
+          "recipes.furniture"
+        ]
+      }
+    },
+    {
+      "id": "first_furniture",
+      "line": "main",
+      "title": "做一件家具",
+      "description": "到工作台旁邊，做一張椅子或桌子。",
+      "giver": "xiaogai",
+      "requires": [
+        "first_plank"
+      ],
+      "module": "crafting",
+      "conditions": [
+        {
+          "type": "event",
+          "event": "crafting:crafted",
+          "match": {
+            "recipe": "chair"
+          },
+          "count": 1,
+          "label": "做 1 張椅子"
+        }
+      ],
+      "rewards": {
+        "items": [
+          {
+            "item": "wood",
+            "qty": 4
+          }
+        ],
+        "points": 10
+      }
     }
   ]
 }
