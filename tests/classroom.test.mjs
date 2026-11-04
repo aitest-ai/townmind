@@ -10,7 +10,8 @@ import { readPackDir, ROOT } from '../scripts/pack-io.mjs';
 
 const island = await readPackDir(join(ROOT, 'data/worldpacks/island-default'));
 
-function boot(enabled = ['classroom', 'residents'], config = {}) {
+// 既有的測試用世界包指定的密碼 0000（模擬學校統一設定）；老師自己設定密碼的流程在下面另外測
+function boot(enabled = ['classroom', 'residents'], config = { teacherPin: '0000' }, prefs = null) {
   let clock = 1_000_000;
   const policy = createPolicy();
   const banners = [];
@@ -20,6 +21,7 @@ function boot(enabled = ['classroom', 'residents'], config = {}) {
     now: () => clock,
     notify: (t, lv) => { if (lv === 'banner') banners.push(t); },
     save: () => { saves++; return true; },
+    ...(prefs ? { prefs } : {}),
   };
   // 和外殼一樣：policy 關掉打字時，過濾一律拒絕
   services.textFilter = (t, o) => (policy.get('playerTyping', true) === false ? { ok: false, reason: policy.get('typingReason', '現在不能打字喔') } : defaultTextFilter(t, o));
@@ -124,4 +126,43 @@ test('沒開課堂模式：沒有任何限制，也沒有老師面板', () => {
   const { e, policy } = boot(['residents']);
   assert.equal(policy.get('playerTyping', true), true);
   assert.equal(e.listPanels().some((p) => p.owner === 'classroom'), false);
+});
+
+const memPrefs = () => { const m = new Map(); return { get: (k, d = null) => (m.has(k) ? m.get(k) : d), set: (k, v) => m.set(k, v), raw: m }; };
+
+test('沒有預設密碼：老師第一次使用時自己設定；太簡單、兩次不一樣都會說明', () => {
+  const prefs = memPrefs();
+  const { e } = boot(['classroom'], {}, prefs);
+  assert.equal(e.runCommand('classroom.unlock', { pin: '0000' }).reason, '還沒有設定老師密碼，請先設定');
+  assert.match(JSON.stringify(e.renderPanel('classroom.teacher')), /第一次使用/);
+  assert.equal(e.runCommand('classroom.setPin', { pin: '12', confirm: '12' }).reason, '密碼要是 4～8 位數字');
+  assert.match(e.runCommand('classroom.setPin', { pin: '0000', confirm: '0000' }).reason, /太容易被猜到/);
+  assert.match(e.runCommand('classroom.setPin', { pin: '1234', confirm: '1234' }).reason, /太容易被猜到/);
+  assert.equal(e.runCommand('classroom.setPin', { pin: '2468', confirm: '2486' }).reason, '兩次輸入的密碼不一樣');
+  assert.equal(e.runCommand('classroom.setPin', { pin: '2468', confirm: '2468' }).ok, true);
+  assert.equal(e.runCommand('classroom.setSpeed', { speed: 2 }).ok, true, '設定好就自動解鎖');
+  assert.doesNotMatch(JSON.stringify([...prefs.raw]), /2468/, '只存雜湊值，不存密碼本身');
+  // 設定後：別人不能直接改密碼（要先解鎖）
+  e.runCommand('classroom.lock');
+  assert.equal(e.runCommand('classroom.setPin', { pin: '1357', confirm: '1357' }).reason, '請先輸入老師密碼');
+  assert.equal(e.runCommand('classroom.unlock', { pin: '0000' }).reason, '密碼不對');
+  assert.equal(e.runCommand('classroom.unlock', { pin: '2468' }).ok, true);
+});
+
+test('密碼和存檔分開：開新遊戲（新的引擎、沒有存檔）密碼還在', () => {
+  const prefs = memPrefs();
+  boot(['classroom'], {}, prefs).e.runCommand('classroom.setPin', { pin: '8642', confirm: '8642' });
+  const again = boot(['classroom'], {}, prefs);
+  assert.equal(again.e.runCommand('classroom.unlock', { pin: '8642' }).ok, true);
+  const blob = JSON.stringify(again.e.serializeAll());
+  assert.equal(blob.includes('8642') || blob.includes('pinHash'), false, '存檔裡沒有密碼，也沒有雜湊值');
+});
+
+test('世界包指定密碼時：用那一組（學校統一、或忘記密碼時救援），不能在控制台改', () => {
+  const prefs = memPrefs();
+  boot(['classroom'], {}, prefs).e.runCommand('classroom.setPin', { pin: '8642', confirm: '8642' });
+  const { e } = boot(['classroom'], { teacherPin: '5791' }, prefs);
+  assert.equal(e.runCommand('classroom.unlock', { pin: '8642' }).reason, '密碼不對');
+  assert.equal(e.runCommand('classroom.unlock', { pin: '5791' }).ok, true);
+  assert.match(e.runCommand('classroom.setPin', { pin: '1357', confirm: '1357' }).reason, /世界包設定/);
 });

@@ -81,6 +81,8 @@ export default {
     for (const kind of KINDS) {
       ctx.registerEntityKind(kind, {
         label: kind,
+        // 樹、灌木、石頭會擋路（玩家會繞過去）；地上的貝殼不擋
+        solid: kind !== 'forage', radius: kind === 'bush' ? 0.36 : 0.42,
         interactions: [{ label: (e) => `${species.get(e.ref)?.actionLabel ?? VERB[kind]}（${e.label}）`, command: 'gathering.harvest', args: (e) => ({ target: e.id }) }],
       });
     }

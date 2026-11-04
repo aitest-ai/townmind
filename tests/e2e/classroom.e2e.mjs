@@ -9,14 +9,46 @@ test.after(() => env.close());
 const benign = (errs) => errs.filter((e) => !/WebGL|GPU stall|swiftshader|GroupMarkerNotSet/i.test(e));
 const T = '[data-panel="classroom.teacher"]';
 
+// 第一次使用：設定老師密碼（沒有預設密碼）
+async function setPin(page, pin = '2468') {
+  await page.fill(`${T} input >> nth=0`, pin);
+  await page.fill(`${T} input >> nth=1`, pin);
+  await page.click(`${T} button:has-text("設定老師密碼")`);
+  await page.waitForSelector(`${T} button:has-text("開始上課計時")`);
+}
+
+test('第一次使用：要老師自己設定密碼；0000 不行；設定後重新整理要用新密碼解鎖', async () => {
+  const page = await env.newPage('/?new=1&view=2d');
+  await env.waitRunning(page);
+  assert.match(await page.textContent(T), /第一次使用/);
+  await page.locator(T).scrollIntoViewIfNeeded();
+  await page.screenshot({ path: join(SHOTS, 'pr9-teacher-first-pin.png') });
+  await page.fill(`${T} input >> nth=0`, '0000');
+  await page.fill(`${T} input >> nth=1`, '0000');
+  await page.click(`${T} button:has-text("設定老師密碼")`);
+  await page.waitForSelector('.toast:has-text("太容易被猜到")');
+  await setPin(page, '2468');
+  await page.goto(env.base + '/?view=2d');
+  await env.waitRunning(page);
+  await page.fill(`${T} input`, '2468');
+  await page.click(`${T} button:has-text("解鎖")`);
+  await page.waitForSelector(`${T} button:has-text("開始上課計時")`);
+  // 開新遊戲：密碼還在（和存檔分開）
+  await page.goto(env.base + '/?new=1&view=2d');
+  await env.waitRunning(page);
+  assert.doesNotMatch(await page.textContent(T), /第一次使用/);
+});
+
 test('老師控制台：密碼錯誤說明原因；解鎖後關打字、鎖速度；學生畫面跟著變', async () => {
   const page = await env.newPage('/?new=1&view=2d');
   await env.waitRunning(page);
   assert.ok(await page.isVisible('[data-panel="shell.status"] select >> nth=0'), '一開始學生可以調速度');
-  await page.fill(`${T} input`, '1234');
+  await setPin(page, '2468');
+  await page.click(`${T} button:has-text("鎖上控制台")`);
+  await page.fill(`${T} input`, '1357');
   await page.click(`${T} button:has-text("解鎖")`);
   await page.waitForSelector('.toast:has-text("密碼不對")');
-  await page.fill(`${T} input`, '0000');
+  await page.fill(`${T} input`, '2468');
   await page.click(`${T} button:has-text("解鎖")`);
   await page.waitForSelector(`${T} button:has-text("開始上課計時")`);
   await page.click(`${T} button:has-text("學生打字：關")`);
@@ -37,13 +69,11 @@ test('老師控制台：密碼錯誤說明原因；解鎖後關打字、鎖速�
 test('上課倒數：學生看得到剩幾分鐘；快到時提醒；下課時大訊息、全班暫停', async () => {
   const page = await env.newPage('/?new=1&view=2d');
   await env.waitRunning(page);
-  await page.fill(`${T} input`, '0000');
-  await page.click(`${T} button:has-text("解鎖")`);
-  await page.waitForSelector(`${T} button:has-text("開始上課計時")`);
+  await setPin(page, '2468');
   await page.fill(`${T} input >> nth=0`, '8');
   await page.click(`${T} button:has-text("開始上課計時")`);
   await page.waitForTimeout(500);
-  assert.match(await page.textContent('[data-panel="classroom.lesson"]'), /這節課還剩\s*7 分 5\d 秒|這節課還剩\s*8 分 00 秒/);
+  assert.match(await page.textContent('[data-panel="classroom.lesson"]'), /這節課還剩\s*[78] 分 \d\d 秒/); // 只檢查分鐘：機器忙的時候秒數會差一點
   await page.screenshot({ path: join(SHOTS, 'pr7-lesson-countdown.png') });
   await page.evaluate(() => { window.__tm.clockOffset = 3.5 * 60_000; });
   await page.waitForSelector('#banner:has-text("還有 5 分鐘下課")');

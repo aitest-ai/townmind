@@ -12,6 +12,7 @@ import { createPanelHost, toast, log, showFatal, banner, showDialog } from './ui
 import { createPlayerController } from './player.js';
 import { attachInput } from './input.js';
 import { createPolicy } from './policy.js';
+import { createPrefs } from './prefs.js';
 
 const $ = (id) => document.getElementById(id);
 const params = new URLSearchParams(location.search);
@@ -112,12 +113,14 @@ async function boot() {
   //   policy：模組設定的限制（見 policy.js）
   //   now()：真實時間（毫秒），課堂計時用；測試時可用 window.__tm.clockOffset 快轉
   //   save()：立刻存檔
+  //   prefs：和存檔分開保存的設定（get／set）
   const policy = createPolicy();
   let requestSave = () => false;
   const services = {
     ...createCoreServices(data),
     notify: (text, level = 'info') => { const t = String(text).slice(0, 160); log(t); if (level === 'banner') banner(t); else if (level === 'toast') toast(t); },
     policy,
+    prefs: createPrefs(`townmind:${data.pack.id}`), // 和存檔分開的設定（例如老師密碼），開新遊戲不會清掉
     now: () => Date.now() + (debug.clockOffset || 0),
     save: () => requestSave(),
   };
@@ -309,7 +312,9 @@ async function boot() {
   engine.events.on('core:dayStarted', (d) => { if (!d.offline) log(`🌅 第 ${d.day} 天開始了`); });
 
   // 9.5 玩家操控與「互動」按鈕（只靠 engine.interactionsFor，新模組不必改這裡）
-  const player = createPlayerController({ entities, island: data.island });
+  // 擋路的東西：模組用 registerEntityKind(kind, { solid: true, radius }) 宣告
+  const solidRadius = (e) => { const k = engine.entityKind(e.kind); return k?.solid ? (k.radius ?? 0.42) : 0; };
+  const player = createPlayerController({ entities, island: data.island, solidRadius });
   const REACH = 2.2;
   let hudKey = '', hudItems = [];
   const nearbyInteractions = () => {
@@ -341,22 +346,40 @@ async function boot() {
       hud.append(b);
     }
   };
-  attachInput({
-    stage: $('stage'), player,
-    toWorld: (x, y) => views[current].toWorld(x, y),
+  const wantStick = params.get('joystick') === '1' || (params.get('joystick') !== '0' && matchMedia('(pointer: coarse)').matches);
+  const input = attachInput({
+    stage: $('stage'), joystick: wantStick,
+    onTap: (x, y) => { const p = views[current].toWorld(x, y); if (p && !player.setTarget(p.x, p.y)) toast('那裡走不過去喔', 'warn', 2500); },
     onInteract: () => { const it = hudItems.find((x) => x.ok); if (it) runInteraction(it); },
   });
+  // 螢幕方向 → 地圖方向：3D 鏡頭轉了角度時跟著轉
+  let wasSteering = false;
+  const steer = () => {
+    const v = input.vector();
+    const on = Math.hypot(v.x, v.y) > 0.01;
+    if (!on && !wasSteering) return;
+    wasSteering = on;
+    const a = current === '3d' ? (views['3d']?.azimuth?.() ?? 0) : 0;
+    player.setDirection(Math.cos(a) * v.x + Math.sin(a) * v.y, -Math.sin(a) * v.x + Math.cos(a) * v.y);
+  };
 
   // 10. 主迴圈
   let last = performance.now(), lastHud = 0, lastIdle = 0;
   const frame = (now) => {
-    const dt = Math.min(0.1, (now - last) / 1000); last = now;
+    const raw = Math.min(0.25, (now - last) / 1000); last = now;
+    const dt = Math.min(0.1, raw);
     let rem = time.advance(dt);
     if (rem > 0) while (rem > 0) { const s = Math.min(rem, 0.25); engine.update(s); rem -= s; }
     else if (now - lastIdle > 250) { lastIdle = now; engine.update(0); } // 暫停時系統仍收到 dt=0（例如課堂計時要繼續走）
-    player.update(dt);
+    steer();
+    // 玩家用真實經過的時間（平板掉幀時也不會變慢），切成小步避免穿過東西
+    for (let left = raw; left > 1e-4; left -= 1 / 30) player.update(Math.min(left, 1 / 30));
+    // 目的地記號：點地面後顯示一個小圈圈，走到就消失（外殼自己的實體，不存檔）
+    const tgt = player.target;
+    if (tgt) { if (!entities.get('shell.marker')) entities.add({ id: 'shell.marker', kind: 'marker', owner: 'shell', art: 'marker', x: tgt.x, y: tgt.y }); else entities.move('shell.marker', tgt.x, tgt.y); }
+    else if (entities.get('shell.marker')) entities.remove('shell.marker');
     if (now - lastHud > 200) { lastHud = now; refreshHud(); }
-    try { views[current].render(dt); } catch (e) { debug.errors.push(e.message); }
+    try { views[current].render(raw); } catch (e) { debug.errors.push(e.message); } // 畫面用真實經過時間：鏡頭平滑在掉幀時也一樣快
     refreshPanels();
     if (time.elapsed - lastSave > AUTOSAVE_SEC) saveNow();
     requestAnimationFrame(frame);
@@ -383,7 +406,7 @@ async function boot() {
   }
 
   Object.assign(debug, {
-    status: 'running', engine, services, data, views, player, hud: () => hudItems, get view() { return current; }, setView, storage, notices, saveNow, isNew,
+    status: 'running', engine, services, data, views, player, input, hud: () => hudItems, get view() { return current; }, setView, storage, notices, saveNow, isNew,
     snapshot: () => ({ day: time.day, minute: Math.round(time.minuteOfDay), modules: engine.enabledModules(), entities: entities.all().length, bag: inventory.list('player') }),
   });
 }
