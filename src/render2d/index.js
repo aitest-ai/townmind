@@ -102,6 +102,16 @@ Object.assign(PRESETS, {
     g.fillStyle = '#c99a5b'; g.fillRect(cx - t * 0.42, cy - t * 0.05, t * 0.84, t * 0.38);
     for (let i = 0; i < 4; i++) { g.fillStyle = i % 2 ? '#f5f0e6' : '#e0574a'; g.fillRect(cx - t * 0.46 + i * t * 0.23, cy - t * 0.42, t * 0.23, t * 0.3); }
   },
+  // 競速：起跑門、檢查點（下一個會亮起來）、幽靈（最佳紀錄）
+  race_gate(g, cx, cy, t) {
+    g.fillStyle = '#e0574a'; g.fillRect(cx - t * 0.5, cy - t * 0.5, t * 0.12, t * 0.8); g.fillRect(cx + t * 0.38, cy - t * 0.5, t * 0.12, t * 0.8);
+    for (let i = 0; i < 6; i++) { g.fillStyle = i % 2 ? '#222' : '#fff'; g.fillRect(cx - t * 0.5 + i * t * 0.167, cy - t * 0.6, t * 0.167, t * 0.14); }
+  },
+  checkpoint(g, cx, cy, t, e) {
+    g.strokeStyle = e.state?.next ? '#ffd23f' : 'rgba(255,255,255,.6)'; g.lineWidth = Math.max(2, t * (e.state?.next ? 0.12 : 0.06));
+    g.beginPath(); g.arc(cx, cy, t * 0.6, 0, Math.PI * 2); g.stroke();
+  },
+  ghost(g, cx, cy, t) { g.fillStyle = 'rgba(160,190,255,.55)'; circle(g, cx, cy, t * 0.3); },
   marker(g, cx, cy, t) {
     g.strokeStyle = 'rgba(255,255,255,.95)'; g.lineWidth = Math.max(2, t * 0.08);
     g.beginPath(); g.ellipse(cx, cy + t * 0.15, t * 0.32, t * 0.18, 0, 0, Math.PI * 2); g.stroke();

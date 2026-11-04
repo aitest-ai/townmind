@@ -22,9 +22,16 @@ test('外殼啟動：沒有錯誤、顯示世界包標題、時間會走、有�
   assert.equal(await page.isVisible('[data-panel="shell.save"]'), false);
   await page.click('#settingsBtn');
   assert.ok(await page.isVisible('[data-panel="shell.save"]'));
-  assert.match(await page.textContent('[data-panel="shell.modules"]'), /還沒有做好/);
+  assert.match(await page.textContent('[data-panel="shell.modules"]'), /競速/);
   await page.screenshot({ path: join(SHOTS, 'pr10-settings.png') });
   await page.click('#settingsClose');
+  // 網址開一個還沒做好的功能：提示只出現在設定選單，玩家畫面看不到
+  await page.goto(env.base + '/?new=1&view=2d&mods=minigames=on');
+  await env.waitRunning(page);
+  await page.waitForTimeout(300);
+  assert.doesNotMatch(await page.innerText('body'), /製作中|沒有做好/);
+  await page.click('#settingsBtn');
+  assert.match(await page.textContent('[data-panel="shell.modules"]'), /還沒有做好.*小遊戲|minigames/s);
   await page.screenshot({ path: join(SHOTS, 'pr3-shell.png') });
   assert.deepEqual(page.errors, []);
 });

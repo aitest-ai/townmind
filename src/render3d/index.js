@@ -244,6 +244,31 @@ function makeShop() { // 商店攤位：櫃台＋紅白條紋遮陽棚
   return g;
 }
 
+// 競速：起跑門、檢查點旗子、幽靈
+function makeRaceGate() {
+  const g = new THREE.Group(), red = std(0xe0574a);
+  for (const x of [-1.6, 1.6]) { const p = new THREE.Mesh(new THREE.CylinderGeometry(0.15, 0.15, 3.2, 8), red); p.position.set(x, 1.6, 0); g.add(p); }
+  const banner = new THREE.Mesh(new THREE.BoxGeometry(3.6, 0.6, 0.12), std(0xffffff)); banner.position.y = 3.2; g.add(banner);
+  for (let i = 0; i < 8; i++) { const sq = new THREE.Mesh(new THREE.BoxGeometry(0.42, 0.28, 0.14), std(0x222222)); sq.position.set(-1.58 + i * 0.45, 3.2 + (i % 2 ? 0.14 : -0.14), 0); g.add(sq); }
+  g.traverse((o) => { if (o.isMesh) o.castShadow = true; });
+  return g;
+}
+function makeCheckpoint() {
+  const g = new THREE.Group();
+  const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.06, 2.4, 6), std(0xdddddd)); pole.position.y = 1.2; g.add(pole);
+  const flag = new THREE.Mesh(new THREE.PlaneGeometry(0.9, 0.6), new THREE.MeshStandardMaterial({ color: 0xffffff, side: THREE.DoubleSide })); flag.position.set(0.45, 2.1, 0); g.add(flag);
+  const ring = new THREE.Mesh(new THREE.RingGeometry(1.2, 1.45, 32), new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.5, depthWrite: false }));
+  ring.rotation.x = -Math.PI / 2; ring.position.y = 0.05; g.add(ring);
+  g.userData.flag = flag; g.userData.ring = null; g.userData.cpRing = ring;
+  return g;
+}
+function makeGhost() {
+  const g = new THREE.Group();
+  const m = new THREE.Mesh(new THREE.CapsuleGeometry(0.45, 1.2, 4, 10), new THREE.MeshStandardMaterial({ color: 0xa0beff, transparent: true, opacity: 0.45 }));
+  m.position.y = 1.1; g.add(m);
+  return g;
+}
+
 function makeUnknown() {
   const g = new THREE.Group();
   const m = new THREE.Mesh(new THREE.SphereGeometry(0.4, 8, 6), std(0x888888)); m.position.y = 0.4; g.add(m);
@@ -386,6 +411,9 @@ export async function createRenderer3D(canvas, { data, services, lowPower = fals
       case 'bug_flying': rec.part = makeBug(true); break;
       case 'animal_small': rec.part = makeSmallAnimal(); break;
       case 'shop': rec.part = makeShop(); break;
+      case 'race_gate': rec.part = makeRaceGate(); root.rotation.y = Math.PI / 2; break;
+      case 'checkpoint': rec.part = makeCheckpoint(); break;
+      case 'ghost': rec.part = makeGhost(); break;
       case 'fence': rec.part = makeFence(); break;
       case 'chair': rec.part = makeChair(); break;
       case 'table': rec.part = makeTable(); break;
@@ -519,6 +547,11 @@ export async function createRenderer3D(canvas, { data, services, lowPower = fals
         const col = st.ready ? 0xe8b84a : 0x5fae4a;
         rec.crop.children.forEach((m) => m.material.color.setHex(col));
         rec.part.children[0].material.color.setHex(st.wateredDay != null && st.wateredDay === time.day ? 0x6b4a2e : 0x8a6440);
+      }
+      if (rec.preset === 'checkpoint') { // 下一個檢查點：旗子變黃、地上的圈圈亮起來
+        const next = !!st.next;
+        rec.part.userData.flag.material.color.setHex(next ? 0xffd23f : 0xffffff);
+        rec.part.userData.cpRing.material.opacity = next ? 0.85 : 0.3;
       }
       if (rec.preset === 'depot') {
         rec.part.userData.logs.forEach((m, i) => { m.visible = i < Math.ceil(Math.min(st.wood ?? 0, 24) / 2); });

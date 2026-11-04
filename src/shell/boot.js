@@ -69,7 +69,8 @@ async function boot() {
     const packJson = await fetchJson(`data/worldpacks/${PACK_ID}/pack.json`);
     // 要讀的資料檔：世界包有開的模組＋網址開的模組（網址關掉的模組，資料也照樣讀，世界包檢查才不會說缺資料）
     const willEnable = new Set([...resolveEnabled(packJson.modules, {}).enabled, ...resolveEnabled(packJson.modules, overrides).enabled]);
-    data = await loadPack((name) => (name === 'pack' ? packJson : fetchJson(`data/worldpacks/${PACK_ID}/${name}.json`)), { schemas: schemas.filter((s) => willEnable.has(s.module)) });
+    const runnable = (id) => ['implemented', 'prototype'].includes(cat.get(id)?.status); // 還沒做好的模組不會啟動，不必下載它的資料
+    data = await loadPack((name) => (name === 'pack' ? packJson : fetchJson(`data/worldpacks/${PACK_ID}/${name}.json`)), { schemas: schemas.filter((s) => willEnable.has(s.module) && runnable(s.module)) });
     for (const f of ['art', 'text']) if (!data[f] || typeof data[f] !== 'object') data[f] = {};
   } catch (e) {
     return fail({ message: `世界包「${PACK_ID}」讀取失敗：${e.message}`, hint: '請檢查網址的 pack= 是否拼對，或資料夾 data/worldpacks/ 裡有沒有這個世界包。' });

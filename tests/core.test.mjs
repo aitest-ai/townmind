@@ -306,6 +306,7 @@ test('世界包：啟用的模組缺必要資料', () => {
 test('世界包：啟用競速模組卻沒有賽道資料', () => {
   const d = clone(basePack);
   d.pack.modules.racing = { enabled: true, config: {} };
+  d.tracks = []; // 範例世界包現在有賽道：先清掉
   assert.ok(hasErr(d, /tracks|racing/));
   d.tracks = [{ id: 'beach_loop' }];
   assert.equal(hasErr(d, /需要「tracks」/), false);

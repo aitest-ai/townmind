@@ -124,6 +124,7 @@ export default {
       update(dt) {
         clock += dt;
         for (const r of list) {
+          if (r.held) { syncEntity(r); continue; } // 被其他模組暫時控制中
           if (!r.busy && clock >= r.nextAt) think(r);
           stroll(r, dt);
           syncEntity(r);
@@ -236,6 +237,8 @@ export default {
           advisors.push(advisor);
         },
         list: () => list.map((r) => ({ id: r.id, name: r.name, role: r.role, say: r.say })),
+        // 暫時讓其他模組控制這位居民（例如競速時當對手）：不散步、不自己做決定
+        hold(id, on = true) { const r = byId.get(id); if (!r) return false; r.held = !!on; r.walkTo = null; return true; },
         // 讓居民說一句話（頭上的氣泡），例如收到禮物時的回應；只用規則與範本，不呼叫 AI
         say(id, text, seconds = cfg.sayFor) {
           const r = byId.get(id);

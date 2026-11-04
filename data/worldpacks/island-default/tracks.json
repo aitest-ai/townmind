@@ -1,0 +1,41 @@
+[
+  {
+    "id": "island_loop",
+    "name": "小島環島賽",
+    "vehicle": "skateboard",
+    "laps": 2,
+    "start": {
+      "x": 18,
+      "y": 19
+    },
+    "checkpoints": [
+      {
+        "x": 26,
+        "y": 15
+      },
+      {
+        "x": 22,
+        "y": 11
+      },
+      {
+        "x": 13,
+        "y": 12
+      },
+      {
+        "x": 9,
+        "y": 15
+      },
+      {
+        "x": 11,
+        "y": 18
+      }
+    ],
+    "terrainSpeed": {
+      "s": 0.8
+    },
+    "rivals": [
+      "afu",
+      "damu"
+    ]
+  }
+]
