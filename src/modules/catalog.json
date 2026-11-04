@@ -86,12 +86,12 @@
     {
       "id": "crafting",
       "name": "製作",
-      "status": "planned",
+      "status": "implemented",
       "summary": "用材料依配方做出物品，部分配方需要工作台。",
       "requires": [],
       "optional": [
-        "gathering",
-        "building"
+        "actions",
+        "quests"
       ],
       "conflicts": [],
       "needsData": [
