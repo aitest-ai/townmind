@@ -1,0 +1,356 @@
+{
+  "size": {
+    "w": 32,
+    "h": 24
+  },
+  "tileSize": 1,
+  "legend": {
+    "~": {
+      "name": "水",
+      "walkable": false
+    },
+    "s": {
+      "name": "沙地",
+      "walkable": true
+    },
+    ".": {
+      "name": "草地",
+      "walkable": true
+    }
+  },
+  "terrain": [
+    "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~",
+    "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~",
+    "~~~~~~~~~~~~~~sssssss~~~~~~~~~~~",
+    "~~~~~~~~~~sssssssssssss~~~~~~~~~",
+    "~~~~~~~~sssss........sss~~~~~~~~",
+    "~~~~~~ssss............sss~~~~~~~",
+    "~~~~~sss.............~~ss~~~~~~~",
+    "~~~~~ss.............~~~~ss~~~~~~",
+    "~~~~sss............~~~~~sss~~~~~",
+    "~~~~ss..............~~~~~sss~~~~",
+    "~~~~ss...............~~~..sss~~~",
+    "~~~sss.....................sss~~",
+    "~~~ss.......................ss~~",
+    "~~sss.......................ss~~",
+    "~~sss......................sss~~",
+    "~~sss......................sss~~",
+    "~~sss....................ssss~~~",
+    "~~~ssss.................ssss~~~~",
+    "~~~~sssssss...........ssss~~~~~~",
+    "~~~~~~~sssssssss...sssss~~~~~~~~",
+    "~~~~~~~~~~~~~sssssssss~~~~~~~~~~",
+    "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~",
+    "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~",
+    "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
+  ],
+  "spawn": {
+    "x": 16,
+    "y": 13
+  },
+  "placements": [
+    {
+      "type": "home",
+      "ref": "laoju",
+      "x": 16,
+      "y": 11
+    },
+    {
+      "type": "home",
+      "ref": "afu",
+      "x": 22,
+      "y": 15
+    },
+    {
+      "type": "home",
+      "ref": "damu",
+      "x": 10,
+      "y": 11
+    },
+    {
+      "type": "home",
+      "ref": "xiaogai",
+      "x": 13,
+      "y": 17
+    },
+    {
+      "type": "home",
+      "ref": "ashi",
+      "x": 17,
+      "y": 17
+    },
+    {
+      "type": "station",
+      "ref": "workbench",
+      "x": 15,
+      "y": 14
+    },
+    {
+      "type": "plot",
+      "x": 19,
+      "y": 13
+    },
+    {
+      "type": "plot",
+      "x": 20,
+      "y": 13
+    },
+    {
+      "type": "plot",
+      "x": 21,
+      "y": 13
+    },
+    {
+      "type": "plot",
+      "x": 19,
+      "y": 14
+    },
+    {
+      "type": "plot",
+      "x": 20,
+      "y": 14
+    },
+    {
+      "type": "plot",
+      "x": 21,
+      "y": 14
+    },
+    {
+      "type": "species",
+      "ref": "oak",
+      "x": 9,
+      "y": 10
+    },
+    {
+      "type": "species",
+      "ref": "oak",
+      "x": 12,
+      "y": 10
+    },
+    {
+      "type": "species",
+      "ref": "oak",
+      "x": 8,
+      "y": 10
+    },
+    {
+      "type": "species",
+      "ref": "oak",
+      "x": 10,
+      "y": 5
+    },
+    {
+      "type": "species",
+      "ref": "oak",
+      "x": 14,
+      "y": 8
+    },
+    {
+      "type": "species",
+      "ref": "oak",
+      "x": 11,
+      "y": 8
+    },
+    {
+      "type": "species",
+      "ref": "oak",
+      "x": 12,
+      "y": 9
+    },
+    {
+      "type": "species",
+      "ref": "oak",
+      "x": 13,
+      "y": 7
+    },
+    {
+      "type": "species",
+      "ref": "oak",
+      "x": 11,
+      "y": 10
+    },
+    {
+      "type": "species",
+      "ref": "oak",
+      "x": 10,
+      "y": 7
+    },
+    {
+      "type": "species",
+      "ref": "oak",
+      "x": 8,
+      "y": 9
+    },
+    {
+      "type": "species",
+      "ref": "oak",
+      "x": 8,
+      "y": 7
+    },
+    {
+      "type": "species",
+      "ref": "apple_tree",
+      "x": 11,
+      "y": 5
+    },
+    {
+      "type": "species",
+      "ref": "apple_tree",
+      "x": 8,
+      "y": 8
+    },
+    {
+      "type": "species",
+      "ref": "apple_tree",
+      "x": 13,
+      "y": 5
+    },
+    {
+      "type": "species",
+      "ref": "berry_bush",
+      "x": 12,
+      "y": 15
+    },
+    {
+      "type": "species",
+      "ref": "berry_bush",
+      "x": 12,
+      "y": 13
+    },
+    {
+      "type": "species",
+      "ref": "berry_bush",
+      "x": 13,
+      "y": 16
+    },
+    {
+      "type": "species",
+      "ref": "berry_bush",
+      "x": 12,
+      "y": 12
+    },
+    {
+      "type": "species",
+      "ref": "boulder",
+      "x": 8,
+      "y": 15
+    },
+    {
+      "type": "species",
+      "ref": "boulder",
+      "x": 7,
+      "y": 16
+    },
+    {
+      "type": "species",
+      "ref": "boulder",
+      "x": 7,
+      "y": 14
+    },
+    {
+      "type": "species",
+      "ref": "shell",
+      "x": 24,
+      "y": 5
+    },
+    {
+      "type": "species",
+      "ref": "shell",
+      "x": 22,
+      "y": 19
+    },
+    {
+      "type": "species",
+      "ref": "shell",
+      "x": 28,
+      "y": 14
+    },
+    {
+      "type": "species",
+      "ref": "shell",
+      "x": 4,
+      "y": 12
+    },
+    {
+      "type": "species",
+      "ref": "shell",
+      "x": 11,
+      "y": 4
+    },
+    {
+      "type": "species",
+      "ref": "shell",
+      "x": 28,
+      "y": 10
+    }
+  ],
+  "regions": [
+    {
+      "id": "forest",
+      "type": "forest",
+      "rect": {
+        "x": 8,
+        "y": 5,
+        "w": 7,
+        "h": 6
+      },
+      "spawns": [
+        {
+          "ref": "beetle",
+          "weight": 1
+        }
+      ]
+    },
+    {
+      "id": "pond",
+      "type": "pond",
+      "rect": {
+        "x": 19,
+        "y": 6,
+        "w": 7,
+        "h": 5
+      },
+      "spawns": [
+        {
+          "ref": "carp",
+          "weight": 1
+        }
+      ]
+    },
+    {
+      "id": "meadow",
+      "type": "meadow",
+      "rect": {
+        "x": 11,
+        "y": 11,
+        "w": 9,
+        "h": 8
+      },
+      "spawns": [
+        {
+          "ref": "rabbit",
+          "weight": 1
+        },
+        {
+          "ref": "butterfly",
+          "weight": 2
+        },
+        {
+          "ref": "beetle",
+          "weight": 1
+        }
+      ]
+    },
+    {
+      "id": "farmland",
+      "type": "farmland",
+      "rect": {
+        "x": 19,
+        "y": 13,
+        "w": 6,
+        "h": 5
+      },
+      "spawns": []
+    }
+  ]
+}

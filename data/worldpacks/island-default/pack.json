@@ -1,0 +1,93 @@
+{
+  "schemaVersion": 1,
+  "id": "island-default",
+  "name": "小島日常（預設世界包）",
+  "version": "0.1.0",
+  "audience": "children",
+  "locale": "zh-Hant",
+  "note": "預設的示範世界包：兒童向、動森式的小島。modules 裡 enabled 為 false 的就是「做好了但這個專案先隱藏」的範例。",
+  "modules": {
+    "residents": {
+      "enabled": true,
+      "config": {}
+    },
+    "crowd": {
+      "enabled": false,
+      "config": {
+        "workers": 24
+      }
+    },
+    "gathering": {
+      "enabled": true,
+      "config": {}
+    },
+    "crafting": {
+      "enabled": true,
+      "config": {}
+    },
+    "building": {
+      "enabled": true,
+      "config": {}
+    },
+    "farming": {
+      "enabled": true,
+      "config": {}
+    },
+    "capture": {
+      "enabled": true,
+      "config": {}
+    },
+    "economy": {
+      "enabled": false,
+      "config": {}
+    },
+    "weather-seasons": {
+      "enabled": true,
+      "config": {}
+    },
+    "social": {
+      "enabled": true,
+      "config": {}
+    },
+    "quests-diary": {
+      "enabled": true,
+      "config": {}
+    },
+    "classroom": {
+      "enabled": true,
+      "config": {
+        "dayLengthMinutes": 12
+      }
+    }
+  },
+  "startingInventory": [
+    {
+      "item": "axe",
+      "qty": 1
+    },
+    {
+      "item": "hoe",
+      "qty": 1
+    },
+    {
+      "item": "net",
+      "qty": 1
+    },
+    {
+      "item": "rod",
+      "qty": 1
+    },
+    {
+      "item": "camera",
+      "qty": 1
+    },
+    {
+      "item": "wheat_seed",
+      "qty": 6
+    },
+    {
+      "item": "carrot_seed",
+      "qty": 4
+    }
+  ]
+}

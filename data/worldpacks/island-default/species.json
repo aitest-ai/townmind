@@ -1,0 +1,202 @@
+[
+  {
+    "id": "oak",
+    "name": "橡樹",
+    "kind": "tree",
+    "yield": [
+      {
+        "item": "wood",
+        "qty": 3
+      }
+    ],
+    "regrowDays": 5
+  },
+  {
+    "id": "apple_tree",
+    "name": "蘋果樹",
+    "kind": "tree",
+    "yield": [
+      {
+        "item": "apple",
+        "qty": 2
+      },
+      {
+        "item": "wood",
+        "qty": 1
+      }
+    ],
+    "regrowDays": 3
+  },
+  {
+    "id": "berry_bush",
+    "name": "漿果叢",
+    "kind": "bush",
+    "yield": [
+      {
+        "item": "berry",
+        "qty": 3
+      }
+    ],
+    "regrowDays": 2
+  },
+  {
+    "id": "boulder",
+    "name": "大石頭",
+    "kind": "rock",
+    "yield": [
+      {
+        "item": "stone",
+        "qty": 2
+      }
+    ],
+    "regrowDays": 4
+  },
+  {
+    "id": "shell",
+    "name": "貝殼",
+    "kind": "forage",
+    "yield": [
+      {
+        "item": "shell",
+        "qty": 1
+      }
+    ],
+    "regrowDays": 3
+  },
+  {
+    "id": "wheat",
+    "name": "小麥",
+    "kind": "crop",
+    "seed": "wheat_seed",
+    "stages": [
+      {
+        "days": 1
+      },
+      {
+        "days": 2
+      },
+      {
+        "days": 2
+      }
+    ],
+    "harvest": [
+      {
+        "item": "wheat",
+        "qty": 2
+      }
+    ],
+    "seasons": [
+      "spring",
+      "summer",
+      "autumn"
+    ]
+  },
+  {
+    "id": "carrot",
+    "name": "紅蘿蔔",
+    "kind": "crop",
+    "seed": "carrot_seed",
+    "stages": [
+      {
+        "days": 1
+      },
+      {
+        "days": 2
+      },
+      {
+        "days": 2
+      }
+    ],
+    "harvest": [
+      {
+        "item": "carrot",
+        "qty": 1
+      }
+    ],
+    "seasons": [
+      "spring",
+      "autumn"
+    ]
+  },
+  {
+    "id": "rabbit",
+    "name": "兔子",
+    "kind": "animal",
+    "capture": {
+      "methods": [
+        {
+          "tool": "camera",
+          "presentation": "photo"
+        },
+        {
+          "tool": "net",
+          "presentation": "catch_release"
+        }
+      ],
+      "reward": [
+        {
+          "item": "rabbit_photo",
+          "qty": 1
+        }
+      ]
+    }
+  },
+  {
+    "id": "carp",
+    "name": "鯉魚",
+    "kind": "fish",
+    "habitat": "pond",
+    "capture": {
+      "methods": [
+        {
+          "tool": "rod",
+          "presentation": "collect"
+        }
+      ],
+      "reward": [
+        {
+          "item": "carp",
+          "qty": 1
+        }
+      ]
+    }
+  },
+  {
+    "id": "beetle",
+    "name": "甲蟲",
+    "kind": "bug",
+    "capture": {
+      "methods": [
+        {
+          "tool": "net",
+          "presentation": "collect"
+        }
+      ],
+      "reward": [
+        {
+          "item": "beetle",
+          "qty": 1
+        }
+      ]
+    }
+  },
+  {
+    "id": "butterfly",
+    "name": "蝴蝶",
+    "kind": "bug",
+    "capture": {
+      "methods": [
+        {
+          "tool": "net",
+          "presentation": "collect"
+        }
+      ],
+      "reward": [
+        {
+          "item": "butterfly",
+          "qty": 1
+        }
+      ]
+    }
+  }
+]

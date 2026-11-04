@@ -1,0 +1,156 @@
+[
+  {
+    "id": "wood",
+    "name": "木頭",
+    "category": "material",
+    "stack": 99,
+    "value": 10
+  },
+  {
+    "id": "stone",
+    "name": "石頭",
+    "category": "material",
+    "stack": 99,
+    "value": 8
+  },
+  {
+    "id": "plank",
+    "name": "木板",
+    "category": "material",
+    "stack": 99,
+    "value": 25
+  },
+  {
+    "id": "shell",
+    "name": "貝殼",
+    "category": "collectible",
+    "stack": 99,
+    "value": 15
+  },
+  {
+    "id": "berry",
+    "name": "漿果",
+    "category": "food",
+    "stack": 99,
+    "value": 6
+  },
+  {
+    "id": "apple",
+    "name": "蘋果",
+    "category": "food",
+    "stack": 99,
+    "value": 10
+  },
+  {
+    "id": "wheat",
+    "name": "小麥",
+    "category": "food",
+    "stack": 99,
+    "value": 12
+  },
+  {
+    "id": "carrot",
+    "name": "紅蘿蔔",
+    "category": "food",
+    "stack": 99,
+    "value": 12
+  },
+  {
+    "id": "wheat_seed",
+    "name": "小麥種子",
+    "category": "seed",
+    "stack": 99,
+    "value": 5
+  },
+  {
+    "id": "carrot_seed",
+    "name": "紅蘿蔔種子",
+    "category": "seed",
+    "stack": 99,
+    "value": 5
+  },
+  {
+    "id": "carp",
+    "name": "鯉魚",
+    "category": "food",
+    "stack": 99,
+    "value": 40
+  },
+  {
+    "id": "beetle",
+    "name": "甲蟲",
+    "category": "collectible",
+    "stack": 99,
+    "value": 30
+  },
+  {
+    "id": "butterfly",
+    "name": "蝴蝶",
+    "category": "collectible",
+    "stack": 99,
+    "value": 30
+  },
+  {
+    "id": "rabbit_photo",
+    "name": "兔子的照片",
+    "category": "collectible",
+    "stack": 99,
+    "value": 50
+  },
+  {
+    "id": "axe",
+    "name": "斧頭",
+    "category": "tool",
+    "stack": 1,
+    "value": 0
+  },
+  {
+    "id": "hoe",
+    "name": "鋤頭",
+    "category": "tool",
+    "stack": 1,
+    "value": 0
+  },
+  {
+    "id": "net",
+    "name": "捕蟲網",
+    "category": "tool",
+    "stack": 1,
+    "value": 0
+  },
+  {
+    "id": "rod",
+    "name": "釣竿",
+    "category": "tool",
+    "stack": 1,
+    "value": 0
+  },
+  {
+    "id": "camera",
+    "name": "相機",
+    "category": "tool",
+    "stack": 1,
+    "value": 0
+  },
+  {
+    "id": "fence",
+    "name": "籬笆",
+    "category": "furniture",
+    "stack": 99,
+    "value": 30
+  },
+  {
+    "id": "chair",
+    "name": "椅子",
+    "category": "furniture",
+    "stack": 99,
+    "value": 60
+  },
+  {
+    "id": "table",
+    "name": "桌子",
+    "category": "furniture",
+    "stack": 99,
+    "value": 90
+  }
+]

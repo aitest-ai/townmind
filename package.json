@@ -1,0 +1,11 @@
+{
+  "name": "townmind",
+  "version": "0.2.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "python3 -m http.server 8123",
+    "test": "node --test tests/core.test.mjs",
+    "check": "node scripts/check-pack.mjs && node scripts/check-boundaries.mjs"
+  }
+}

@@ -1,0 +1,65 @@
+[
+  {
+    "id": "plank",
+    "name": "木板",
+    "inputs": [
+      {
+        "item": "wood",
+        "qty": 2
+      }
+    ],
+    "output": {
+      "item": "plank",
+      "qty": 1
+    }
+  },
+  {
+    "id": "fence",
+    "name": "籬笆",
+    "inputs": [
+      {
+        "item": "plank",
+        "qty": 2
+      }
+    ],
+    "output": {
+      "item": "fence",
+      "qty": 1
+    },
+    "station": "workbench"
+  },
+  {
+    "id": "chair",
+    "name": "椅子",
+    "inputs": [
+      {
+        "item": "plank",
+        "qty": 3
+      }
+    ],
+    "output": {
+      "item": "chair",
+      "qty": 1
+    },
+    "station": "workbench"
+  },
+  {
+    "id": "table",
+    "name": "桌子",
+    "inputs": [
+      {
+        "item": "plank",
+        "qty": 4
+      },
+      {
+        "item": "stone",
+        "qty": 1
+      }
+    ],
+    "output": {
+      "item": "table",
+      "qty": 1
+    },
+    "station": "workbench"
+  }
+]

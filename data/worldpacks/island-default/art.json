@@ -1,0 +1,66 @@
+{
+  "_說明": "美術來源。procedural＝程式生成（preset 是預設造型名稱）；glb＝資產工廠產出的 GLB。底線開頭的鍵是註解，不會被檢查。",
+  "_範例_glb": {
+    "type": "glb",
+    "url": "/models/townmind_laoju.glb"
+  },
+  "oak": {
+    "type": "procedural",
+    "preset": "tree_pine"
+  },
+  "apple_tree": {
+    "type": "procedural",
+    "preset": "tree_round"
+  },
+  "berry_bush": {
+    "type": "procedural",
+    "preset": "bush_berry"
+  },
+  "boulder": {
+    "type": "procedural",
+    "preset": "rock"
+  },
+  "shell": {
+    "type": "procedural",
+    "preset": "shell"
+  },
+  "wheat": {
+    "type": "procedural",
+    "preset": "crop"
+  },
+  "carrot": {
+    "type": "procedural",
+    "preset": "crop"
+  },
+  "rabbit": {
+    "type": "procedural",
+    "preset": "animal_small"
+  },
+  "carp": {
+    "type": "procedural",
+    "preset": "fish"
+  },
+  "beetle": {
+    "type": "procedural",
+    "preset": "bug"
+  },
+  "butterfly": {
+    "type": "procedural",
+    "preset": "bug_flying"
+  },
+  "laoju": {
+    "type": "procedural"
+  },
+  "afu": {
+    "type": "procedural"
+  },
+  "damu": {
+    "type": "procedural"
+  },
+  "xiaogai": {
+    "type": "procedural"
+  },
+  "ashi": {
+    "type": "procedural"
+  }
+}

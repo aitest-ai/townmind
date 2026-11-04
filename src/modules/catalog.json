@@ -1,0 +1,264 @@
+{
+  "schemaVersion": 1,
+  "note": "模組目錄：機器可讀的模組路線圖。status：implemented 已實作、prototype 原型階段（需遷移成正式模組）、planned 規劃中、deferred 暫緩。needsData 的寫法：'recipes' 表示 recipes.json 至少一筆；'species:crop' 表示至少有一個 kind 為 crop 的物種；'species:fish|bug|animal' 表示其中任一種。模組之間只能依 requires／optional 互相使用公開 api。",
+  "modules": [
+    {
+      "id": "residents",
+      "name": "AI 居民",
+      "status": "prototype",
+      "summary": "有個性、有記憶、有自己生活的居民。AI 只能從「已啟用模組開放給 AI 的指令」中選擇行動。",
+      "requires": [],
+      "optional": [
+        "social",
+        "quests-diary"
+      ],
+      "conflicts": [],
+      "needsData": [
+        "residents"
+      ],
+      "provides": [
+        "commands.ai",
+        "chat"
+      ]
+    },
+    {
+      "id": "crowd",
+      "name": "群體幫手",
+      "status": "prototype",
+      "summary": "大量無名小人，依指令執行搬運、採集、蓋房等背景工作。玩家不直接指揮，定位為小鎮的生活感與背景勞動。",
+      "requires": [],
+      "optional": [
+        "residents"
+      ],
+      "conflicts": [],
+      "needsData": [],
+      "provides": [
+        "commands.crowd"
+      ]
+    },
+    {
+      "id": "gathering",
+      "name": "採集",
+      "status": "planned",
+      "summary": "砍樹、摘果、挖石頭、撿貝殼；資源會隨天數再生。",
+      "requires": [],
+      "optional": [],
+      "conflicts": [],
+      "needsData": [
+        "items",
+        "species"
+      ],
+      "provides": [
+        "gather"
+      ]
+    },
+    {
+      "id": "crafting",
+      "name": "製作",
+      "status": "planned",
+      "summary": "用材料依配方做出物品，部分配方需要工作台。",
+      "requires": [],
+      "optional": [
+        "gathering",
+        "building"
+      ],
+      "conflicts": [],
+      "needsData": [
+        "items",
+        "recipes"
+      ],
+      "provides": [
+        "craft"
+      ]
+    },
+    {
+      "id": "building",
+      "name": "佈置與建造",
+      "status": "planned",
+      "summary": "網格吸附擺放、旋轉、收納家具；蓋房子。",
+      "requires": [],
+      "optional": [
+        "crafting"
+      ],
+      "conflicts": [],
+      "needsData": [
+        "items"
+      ],
+      "provides": [
+        "place"
+      ]
+    },
+    {
+      "id": "farming",
+      "name": "耕作",
+      "status": "planned",
+      "summary": "翻土、播種、澆水、收成；作物依天數成長，受季節影響。",
+      "requires": [],
+      "optional": [
+        "weather-seasons"
+      ],
+      "conflicts": [],
+      "needsData": [
+        "species:crop"
+      ],
+      "provides": [
+        "farm"
+      ]
+    },
+    {
+      "id": "capture",
+      "name": "捕捉",
+      "status": "planned",
+      "summary": "釣魚、捕蟲、陷阱、拍照圖鑑。呈現方式（放生、收藏、拍照）由世界包決定；兒童版只允許不呈現傷害的方式。",
+      "requires": [],
+      "optional": [
+        "weather-seasons"
+      ],
+      "conflicts": [],
+      "needsData": [
+        "species:fish|bug|animal"
+      ],
+      "provides": [
+        "capture"
+      ]
+    },
+    {
+      "id": "economy",
+      "name": "商店與貨幣",
+      "status": "planned",
+      "summary": "買賣物品、價格表。",
+      "requires": [],
+      "optional": [],
+      "conflicts": [],
+      "needsData": [
+        "items"
+      ],
+      "provides": [
+        "shop"
+      ]
+    },
+    {
+      "id": "weather-seasons",
+      "name": "天氣與季節",
+      "status": "planned",
+      "summary": "日夜、天氣、四季；影響作物、捕捉與氣氛。",
+      "requires": [],
+      "optional": [],
+      "conflicts": [],
+      "needsData": [],
+      "provides": [
+        "weather"
+      ]
+    },
+    {
+      "id": "social",
+      "name": "好感度與送禮",
+      "status": "planned",
+      "summary": "居民好感度、送禮、解鎖對話與配方。",
+      "requires": [
+        "residents"
+      ],
+      "optional": [],
+      "conflicts": [],
+      "needsData": [
+        "items"
+      ],
+      "provides": [
+        "friendship"
+      ]
+    },
+    {
+      "id": "quests-diary",
+      "name": "小請求與居民日記",
+      "status": "planned",
+      "summary": "居民的小請求；離線期間的小鎮日記。",
+      "requires": [],
+      "optional": [
+        "residents"
+      ],
+      "conflicts": [],
+      "needsData": [],
+      "provides": [
+        "quests",
+        "diary"
+      ]
+    },
+    {
+      "id": "classroom",
+      "name": "課堂模式",
+      "status": "planned",
+      "summary": "時間倍率預設、教師控制台、課堂用的安全限制。",
+      "requires": [],
+      "optional": [],
+      "conflicts": [],
+      "needsData": [],
+      "provides": [
+        "classroom"
+      ]
+    },
+    {
+      "id": "racing",
+      "status": "planned",
+      "requires": [],
+      "optional": [
+        "weather-seasons",
+        "economy",
+        "residents"
+      ],
+      "needsData": [
+        "tracks"
+      ],
+      "summary": "競速賽事：滑板車、小舟、單輪車、風箏滑翔等。賽道由世界包 tracks.json 定義（檢查點、地形速度係數、道具箱）。無碰撞傷害、可愛的失誤動畫（轉圈、掉進水裡被撈起）。AI 居民可當對手，只選擇『油門、路線、使用道具』等受限指令。"
+    },
+    {
+      "id": "minigames",
+      "status": "planned",
+      "requires": [],
+      "optional": [
+        "residents",
+        "economy"
+      ],
+      "needsData": [
+        "games"
+      ],
+      "summary": "限時小遊戲集：釣魚大賽、採果比賽、尋寶（地圖碎片）、捉迷藏、節奏跳舞、蓋房子計時賽、接球。共用計分、獎盃與排行榜介面。"
+    },
+    {
+      "id": "events",
+      "status": "planned",
+      "requires": [],
+      "optional": [
+        "racing",
+        "minigames",
+        "weather-seasons",
+        "classroom"
+      ],
+      "needsData": [
+        "events"
+      ],
+      "summary": "島上節慶與賽季：把比賽排進行事曆（週末運動會、煙火大會），賽季積分、獎盃陳列室、居民報名與賽後閒聊。班級模式可排進課堂時段。"
+    },
+    {
+      "id": "combat",
+      "name": "戰鬥",
+      "status": "deferred",
+      "summary": "暫不開發。兒童版預設不提供。",
+      "requires": [],
+      "optional": [],
+      "conflicts": [],
+      "needsData": [],
+      "provides": []
+    },
+    {
+      "id": "multiplayer",
+      "name": "多人同島",
+      "status": "deferred",
+      "summary": "暫不開發。",
+      "requires": [],
+      "optional": [],
+      "conflicts": [],
+      "needsData": [],
+      "provides": []
+    }
+  ]
+}

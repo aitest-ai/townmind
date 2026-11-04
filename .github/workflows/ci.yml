@@ -1,0 +1,18 @@
+name: CI
+on:
+  push:
+  pull_request:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: 單元測試
+        run: npm test
+      - name: 世界包與邊界檢查
+        run: npm run check
+      # TODO（WP9）：加入 Playwright 冒煙測試（3D 啟動、操作、存讀檔）與「新增模組的 PR 不得修改 src/core」的檢查。
