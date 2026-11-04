@@ -157,17 +157,20 @@
     {
       "id": "economy",
       "name": "商店與貨幣",
-      "status": "planned",
-      "summary": "買賣物品、價格表。",
+      "status": "implemented",
+      "summary": "錢包、商店買賣（站在商店旁邊）；商品與價格由 shop.json 定義，可用任務旗標上架；工具不能賣。",
       "requires": [],
-      "optional": [],
+      "optional": [
+        "quests"
+      ],
       "conflicts": [],
       "needsData": [
         "items"
       ],
       "provides": [
         "shop"
-      ]
+      ],
+      "schema": true
     },
     {
       "id": "weather-seasons",

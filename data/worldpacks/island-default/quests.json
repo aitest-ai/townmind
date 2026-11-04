@@ -349,6 +349,34 @@
       "rewards": {
         "points": 15
       }
+    },
+    {
+      "id": "first_trade",
+      "line": "main",
+      "title": "第一次做生意",
+      "description": "到雜貨店把多的東西賣掉，再買一包種子。",
+      "giver": "laoju",
+      "requires": [
+        "first_harvest"
+      ],
+      "module": "economy",
+      "conditions": [
+        {
+          "type": "event",
+          "event": "economy:sold",
+          "count": 1,
+          "label": "賣 1 次東西"
+        },
+        {
+          "type": "event",
+          "event": "economy:bought",
+          "count": 1,
+          "label": "買 1 次東西"
+        }
+      ],
+      "rewards": {
+        "points": 10
+      }
     }
   ]
 }

@@ -1,0 +1,30 @@
+{
+  "name": "小島雜貨店",
+  "currency": "貝幣",
+  "startCoins": 50,
+  "sellRate": 0.5,
+  "buy": [
+    {
+      "item": "wheat_seed",
+      "price": 8
+    },
+    {
+      "item": "carrot_seed",
+      "price": 8
+    },
+    {
+      "item": "plank",
+      "price": 20
+    },
+    {
+      "item": "chair",
+      "price": 80,
+      "unlock": "level2"
+    },
+    {
+      "item": "table",
+      "price": 120,
+      "unlock": "level3"
+    }
+  ]
+}

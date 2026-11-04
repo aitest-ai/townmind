@@ -98,6 +98,10 @@ Object.assign(PRESETS, {
     g.fillStyle = '#f4efe6'; ellipse(g, cx, cy, t * 0.2, t * 0.15); circle(g, cx + t * 0.16, cy - t * 0.1, t * 0.1);
     g.fillStyle = '#e8c9c9'; g.fillRect(cx + t * 0.12, cy - t * 0.34, t * 0.04, t * 0.16); g.fillRect(cx + t * 0.19, cy - t * 0.34, t * 0.04, t * 0.16);
   },
+  shop(g, cx, cy, t) { // 商店攤位：遮陽棚＋櫃台
+    g.fillStyle = '#c99a5b'; g.fillRect(cx - t * 0.42, cy - t * 0.05, t * 0.84, t * 0.38);
+    for (let i = 0; i < 4; i++) { g.fillStyle = i % 2 ? '#f5f0e6' : '#e0574a'; g.fillRect(cx - t * 0.46 + i * t * 0.23, cy - t * 0.42, t * 0.23, t * 0.3); }
+  },
   marker(g, cx, cy, t) {
     g.strokeStyle = 'rgba(255,255,255,.95)'; g.lineWidth = Math.max(2, t * 0.08);
     g.beginPath(); g.ellipse(cx, cy + t * 0.15, t * 0.32, t * 0.18, 0, 0, Math.PI * 2); g.stroke();
