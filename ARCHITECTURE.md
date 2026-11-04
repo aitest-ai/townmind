@@ -42,10 +42,19 @@ export default {
 `aiCallable: true` 且 available 的指令才開放給 AI；`ctx.describeCommandsForAI({ actor })` 自動產生提示詞中的「允許行動清單」。**關掉一個模組，AI 自動不會再提到它。**
 
 ## 5. 存檔
-每個模組註冊自己的切片（key = 模組 id 或 `id.xxx`，整數 version，只存純 JSON）。
+存檔是 `{ format: 2, meta, modules }`。`meta` 含世界包 id／版本、存檔時間、主種子、啟用的模組（外殼可補充遊戲時間等）。
+- 每個模組註冊自己的切片（key = 模組 id 或 `id.xxx`，整數 version，只存純 JSON）；核心服務用 `registerCoreSlice`（key 以 `core.` 開頭），或在服務物件上放 `saveSlice` 自動註冊。
 - 沒啟用的模組的資料原封不動保留（孤兒保存），之後再啟用還在。
 - 某切片載入失敗：保留原始資料、不用預設值覆蓋，並回報。
+- **切片版本比程式新**（學生用舊網頁開新存檔）：不載入、原封保留，回報在 `report.tooNew`。整個存檔格式比程式新：`SAVE_TOO_NEW`。
+- **存檔屬於別的世界包**：預設拒絕（`PACK_MISMATCH`），外殼問過使用者後可用 `allowPackMismatch` 強制。
+- **離線補算**：模組可實作 `catchUp(ctx, { elapsedMs, days })`，外殼讀檔後呼叫 `engine.catchUp()`；不可呼叫 AI，一律用 `ctx.rng`。
+- **種子亂數**：`ctx.rng`（next／int／pick／chance）每個模組一條，由主種子衍生，狀態存在 `core.rng`，所以讀檔後結果可重現。
 - 預設存 localStorage，要有匯出／匯入。版本升級在 `deserialize(data, savedVersion)` 內處理。
+
+## 5.1 模組開關的連帶關閉
+外殼以 `start({ cascade: true })` 啟動：某模組缺了依賴（例如網址 `?mods=residents=off`），依賴它的模組也一起關掉，並在 `notices` 裡用白話說明（「因為『居民』沒有開啟，『好感度』也一起關掉了。」），遊戲照常啟動。
+世界包驗證（`npm run check`）仍把 pack.json 裡的缺依賴當成錯誤，因為那是寫資料的人該修的。
 
 ## 6. 世界包
 核心只認識 `pack`（受眾、模組開關與設定、起始背包）、`items`、`species`、`island`（ASCII 地圖、放置物、區域）、`art`、`text`，並只做通用檢查：
@@ -55,12 +64,14 @@ id 格式與唯一、參照完整、地圖尺寸與出生點、模組依賴與�
 `npm run check` 會收集所有 schema 一起檢查。**新增模組帶來新資料，不需要修改核心。**（規劃中的模組也先附 schema，作為它的資料契約。）
 功能開關：`pack.json` 的 `modules` 為預設，網址可覆寫，如 `?mods=farming=off,capture=on`。
 
-## 7. 邊界規則（`scripts/check-boundaries.mjs`，CI 執行）
-1. core 不 import 模組／渲染層／three，不用 document/window/localStorage。
+## 7. 邊界規則（`npm run check`，CI 執行）
+1. core 不 import 模組／渲染層／three。
 2. 渲染層不 import 模組。
-3. 模組只能 import core，以及 catalog 宣告為 requires/optional 的其他模組的 `index.js`；不 import 渲染層／three。
-4. 每個模組都要先登記在 catalog。
-5. **新增一個模組不應修改 `src/core`。** 若需要，代表核心介面不夠，請另開 PR 說明。
+3. 模組只能 import core，以及 catalog 宣告為 requires/optional 的其他模組的 `index.js`；不 import 渲染層／three／src 以外的檔案。
+4. **core 與模組都不可直接用瀏覽器 API**（document、window、globalThis、localStorage、fetch、requestAnimationFrame、WebSocket……），一律由 services 注入，才能在 Node 完整測試。
+5. 每個模組都要先登記在 catalog；`scripts/check-catalog.mjs` 檢查模組程式的 id、requires／optional／conflicts 與 catalog 完全一致，有 index.js 的模組 status 不可再是 planned。
+6. **新增一個模組不應修改 `src/core`。** 若需要，代表核心介面不夠，請另開 PR 說明。
+7. 世界包資料與模組 config 在執行時是唯讀的（deep freeze）；要改的狀態由模組自己保存。
 
 ## 8. 核心服務（由 WP0 補齊，以 services 注入）
 - `entities`：實體表（id、kind、位置、狀態），渲染層讀它；`registerEntityKind` 定義行為。

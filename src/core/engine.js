@@ -15,7 +15,9 @@
 //   }
 //
 // init 裡可以用的 ctx（只能透過它與引擎互動）：
-//   ctx.id / ctx.config / ctx.data（世界包資料）/ ctx.services（時間、背包等，由外部注入）
+//   ctx.id / ctx.config / ctx.data（世界包資料，唯讀）/ ctx.services（時間、背包等，由外部注入）
+//   ctx.rng                                             這個模組專屬的種子亂數（next/int/pick/chance），狀態會存檔
+//   模組可選擇實作 catchUp(ctx, { elapsedMs, days })：載入存檔後的離線補算（不可呼叫 AI）
 //   ctx.on(name, fn) / ctx.emit(name, payload)          事件（emit 只能用自己的命名空間）
 //   ctx.getModule(id)                                   取得「已宣告依賴」的模組的公開 api
 //   ctx.registerSystem({ id, order, update(dt) })       每個遊戲更新呼叫，order 小的先跑
@@ -32,13 +34,17 @@ import { EventBus } from './events.js';
 import { CommandRegistry } from './commands.js';
 import { FrameworkError } from './errors.js';
 import { defaultTextFilter } from './textfilter.js';
+import { createRng, hashSeed } from './rng.js';
 
 const MODULE_ID = /^[a-z][a-z0-9-]*$/;
 const MAX_SYSTEM_ERRORS = 3;
+export const SAVE_FORMAT = 2;
 
 export class Engine {
-  constructor({ data = {}, services = {}, onError = null, log = null } = {}) {
-    this.data = data;
+  // seed：整局遊戲的主種子（每個模組的 ctx.rng 由它衍生）；labels：模組 id → 中文名稱（白話訊息用）
+  // now：取得目前時間（毫秒）的函式，預設 Date.now，測試可替換
+  constructor({ data = {}, services = {}, onError = null, log = null, seed = 1, labels = {}, now = () => Date.now() } = {}) {
+    this.data = deepFreeze(data);
     this.services = services;
     this.onError = onError;
     this._log = log;
@@ -62,7 +68,39 @@ export class Engine {
     this._seq = 0;
     this._orphans = {};
     this._preserve = new Set();
+    this.seed = seed >>> 0;
+    this.labels = labels;
+    this.now = now;
+    this._rngs = new Map();      // 模組 id → rng
+    this._rngStates = {};        // 存檔裡的亂數狀態（含沒啟用的模組，原封保留）
+    this._coreSlices = new Map(); // 核心服務的存檔切片（key 以 core. 開頭），dispose 後仍保留
+    this.lastLoad = null;        // 最近一次載入的 { meta, report }
+    this.registerCoreSlice({
+      key: 'core.rng', version: 1,
+      serialize: () => {
+        const states = { ...this._rngStates };
+        for (const [id, r] of this._rngs) states[id] = r.getState();
+        return { seed: this.seed, states };
+      },
+      deserialize: (d) => {
+        if (Number.isInteger(d?.seed)) this.seed = d.seed >>> 0;
+        this._rngStates = d?.states && typeof d.states === 'object' ? { ...d.states } : {};
+        for (const [id, r] of this._rngs) if (this._rngStates[id]) { try { r.setState(this._rngStates[id]); } catch { /* 壞的狀態就重新開始 */ } }
+      },
+    });
+    for (const [name, svc] of Object.entries(services || {})) if (svc?.saveSlice) this.registerCoreSlice({ key: `core.${name}`, ...svc.saveSlice });
   }
+
+  // 核心服務（時間、背包、實體……）的存檔切片。key 必須以「core.」開頭。
+  registerCoreSlice(slice) {
+    if (!/^core\.[a-z][a-zA-Z0-9-]*$/.test(slice?.key || '')) throw new FrameworkError('SLICE_NAMESPACE', `核心存檔欄位必須以「core.」開頭，收到「${slice?.key}」`);
+    if (!Number.isInteger(slice.version) || slice.version < 1) throw new FrameworkError('BAD_SLICE', `存檔欄位「${slice.key}」的 version 必須是 1 以上的整數`);
+    if (typeof slice.serialize !== 'function' || typeof slice.deserialize !== 'function') throw new FrameworkError('BAD_SLICE', `存檔欄位「${slice.key}」需要 serialize 與 deserialize`);
+    if (this._coreSlices.has(slice.key)) throw new FrameworkError('DUP_SLICE', `存檔欄位「${slice.key}」重複註冊`);
+    this._coreSlices.set(slice.key, { owner: 'core', ...slice });
+  }
+
+  label(id) { return this.labels?.[id] || this._defs.get(id)?.name || id; }
 
   // ---------- 註冊與解析 ----------
   register(def) {
@@ -82,14 +120,31 @@ export class Engine {
   hasModule(id) { return this._defs.has(id); }
 
   // 回傳啟動順序（被依賴的先啟動）。錯誤訊息都是白話中文並附提示。
-  resolve(enabledIds, { skipUnknown = false } = {}) {
+  // cascade：缺依賴時不報錯，而是把「依賴它的模組」也一起關掉，並在 notices 裡用白話說明。
+  resolve(enabledIds, { skipUnknown = false, cascade = false } = {}) {
     const skipped = [];
-    const ids = [];
+    const notices = [];
+    let ids = [];
     for (const id of enabledIds) {
       if (this._defs.has(id)) { if (!ids.includes(id)) ids.push(id); }
       else if (skipUnknown) skipped.push(id);
       else {
         throw new FrameworkError('UNKNOWN_MODULE', `模組「${id}」沒有註冊`, '可能是還沒實作，或名稱拼錯了。若只是還沒實作，啟動時可用 skipUnknown 略過。');
+      }
+    }
+    if (cascade) {
+      for (let changed = true; changed;) {
+        changed = false;
+        const on0 = new Set(ids);
+        for (const id of ids) {
+          const miss = (this._defs.get(id).requires || []).find((r) => !on0.has(r));
+          if (miss) {
+            ids = ids.filter((x) => x !== id);
+            notices.push({ code: 'CASCADE_OFF', module: id, because: miss, message: `因為「${this.label(miss)}」沒有開啟，「${this.label(id)}」也一起關掉了。` });
+            changed = true;
+            break;
+          }
+        }
       }
     }
     const on = new Set(ids);
@@ -120,13 +175,13 @@ export class Engine {
       order.push(id);
     };
     for (const id of ids) visit(id, []);
-    return { order, skipped };
+    return { order, skipped, notices };
   }
 
   // ---------- 啟動與關閉 ----------
-  start({ enabled = [], config = {}, skipUnknown = false } = {}) {
+  start({ enabled = [], config = {}, skipUnknown = false, cascade = false } = {}) {
     if (this._started.length) throw new FrameworkError('ALREADY_STARTED', '引擎已經啟動', '請先呼叫 dispose()。');
-    const { order, skipped } = this.resolve(enabled, { skipUnknown });
+    const { order, skipped, notices } = this.resolve(enabled, { skipUnknown, cascade });
     let current = null;
     try {
       for (const id of order) {
@@ -143,8 +198,8 @@ export class Engine {
       if (e instanceof FrameworkError) throw e;
       throw new FrameworkError('MODULE_INIT_FAILED', `模組「${current}」啟動失敗：${e.message}`, '其他已啟動的模組已經收乾淨。請看這個模組的 init。');
     }
-    this.events.emit('core:started', { modules: [...this._started], skipped });
-    return { started: [...this._started], skipped };
+    this.events.emit('core:started', { modules: [...this._started], skipped, notices });
+    return { started: [...this._started], skipped, notices };
   }
 
   dispose() {
@@ -160,7 +215,32 @@ export class Engine {
     this._unsubs.clear();
     this._apis.clear();
     this._ctxs.clear();
+    for (const [id, r] of this._rngs) this._rngStates[id] = r.getState(); // 關掉後再開，亂數接著走
+    this._rngs.clear();
     this._started = [];
+  }
+
+  // ---------- 離線補算 ----------
+  // 載入存檔後由外殼呼叫：info = { elapsedMs, days, ... }。依啟動順序呼叫各模組的 catchUp(ctx, info)。
+  // 補算一律用種子亂數（ctx.rng），不呼叫 AI；某個模組出錯只影響它自己。
+  catchUp(info = {}) {
+    const done = [], failed = [];
+    for (const id of this._started) {
+      const def = this._defs.get(id);
+      if (typeof def.catchUp !== 'function') continue;
+      try { def.catchUp(this._ctxs.get(id), { ...info }); done.push(id); } catch (e) {
+        failed.push({ module: id, error: e.message });
+        this._report(id, `離線補算出錯：${e.message}`, e);
+      }
+    }
+    this.events.emit('core:caughtUp', { ...info, done, failed });
+    return { done, failed };
+  }
+
+  // 距離上次存檔過了多久（毫秒）；沒有載入過存檔時是 0。
+  elapsedSinceSave() {
+    const t = this.lastLoad?.meta?.savedAt;
+    return Number.isFinite(t) ? Math.max(0, this.now() - t) : 0;
   }
 
   // 介面外殼（玩家）執行指令的入口。模組請用 ctx.runCommand。
@@ -187,33 +267,57 @@ export class Engine {
   }
 
   // ---------- 存檔 ----------
-  serializeAll() {
+  // meta：外殼可補充（例如遊戲時間）。存檔一定是純 JSON。
+  serializeAll(meta = {}) {
     const modules = {};
-    for (const key of [...this._slices.keys()].sort()) {
-      if (this._preserve.has(key)) { modules[key] = this._orphans[key]; continue; } // 載入失敗的切片：保留原始資料，不用預設值蓋掉
-      const s = this._slices.get(key);
+    const all = new Map([...this._coreSlices, ...this._slices]);
+    for (const key of [...all.keys()].sort()) {
+      if (this._preserve.has(key)) { modules[key] = this._orphans[key]; continue; } // 載入失敗或版本太新的切片：保留原始資料，不用預設值蓋掉
+      const s = all.get(key);
       modules[key] = { v: s.version, data: s.serialize() };
     }
     for (const [key, entry] of Object.entries(this._orphans)) if (!(key in modules)) modules[key] = entry; // 沒啟用的模組：資料原封不動保留
+    const pack = this.data?.pack || {};
+    const fullMeta = {
+      packId: pack.id ?? null, packVersion: pack.version ?? null,
+      savedAt: this.now(), seed: this.seed, modules: [...this._started],
+      ...meta,
+    };
     try {
-      return JSON.parse(JSON.stringify({ format: 1, modules }));
+      return JSON.parse(JSON.stringify({ format: SAVE_FORMAT, meta: fullMeta, modules }));
     } catch (e) {
       throw new FrameworkError('SAVE_NOT_JSON', `存檔資料無法轉成 JSON：${e.message}`, '切片的 serialize() 只能回傳純資料（不可有函式、循環參照）。');
     }
   }
 
-  deserializeAll(blob) {
-    if (!blob || blob.format !== 1 || typeof blob.modules !== 'object') {
+  // allowPackMismatch：存檔來自別的世界包時，預設拒絕；外殼問過使用者後可以強制載入。
+  deserializeAll(blob, { allowPackMismatch = false } = {}) {
+    if (!blob || ![1, SAVE_FORMAT].includes(blob.format) || !blob.modules || typeof blob.modules !== 'object') {
+      if (blob && Number.isInteger(blob.format) && blob.format > SAVE_FORMAT) {
+        throw new FrameworkError('SAVE_TOO_NEW', '這個存檔是用比較新的版本做的，這個網頁看不懂', '請改用最新版的網頁開啟。存檔不會被修改。');
+      }
       throw new FrameworkError('BAD_SAVE', '存檔格式看不懂（可能損毀或太舊）', '請匯入備份，或開始新遊戲。');
     }
-    const report = { loaded: [], orphaned: [], failed: [] };
+    const meta = blob.format >= 2 && blob.meta && typeof blob.meta === 'object' ? blob.meta : {};
+    const packId = this.data?.pack?.id;
+    if (!allowPackMismatch && meta.packId && packId && meta.packId !== packId) {
+      throw new FrameworkError('PACK_MISMATCH', `這個存檔屬於另一個世界「${meta.packId}」，目前開的是「${packId}」`, '請切換到正確的世界包，或開始新遊戲。存檔不會被修改。');
+    }
+    const report = { loaded: [], orphaned: [], failed: [], tooNew: [] };
     this._orphans = {};
     this._preserve = new Set();
+    const all = new Map([...this._coreSlices, ...this._slices]);
     for (const [key, entry] of Object.entries(blob.modules)) {
-      const slice = this._slices.get(key);
+      const slice = all.get(key);
       if (!slice) { this._orphans[key] = entry; report.orphaned.push(key); continue; }
+      if (Number.isInteger(entry?.v) && entry.v > slice.version) { // 程式比存檔舊：不載入、原封保留
+        this._orphans[key] = entry;
+        this._preserve.add(key);
+        report.tooNew.push({ key, saved: entry.v, current: slice.version, message: `「${key}」的存檔資料比這個版本的程式新，先不載入（資料會保留）` });
+        continue;
+      }
       try {
-        slice.deserialize(entry.data, entry.v);
+        slice.deserialize(entry?.data, entry?.v);
         report.loaded.push(key);
       } catch (e) {
         this._orphans[key] = entry;
@@ -221,6 +325,7 @@ export class Engine {
         report.failed.push({ key, error: e.message });
       }
     }
+    this.lastLoad = { meta, report };
     return report;
   }
 
@@ -246,14 +351,25 @@ export class Engine {
     this._unsubs.get(owner).push(off);
   }
 
+  _rngFor(id) {
+    if (!this._rngs.has(id)) {
+      const r = createRng(hashSeed(this.seed, id));
+      if (this._rngStates[id]) { try { r.setState(this._rngStates[id]); } catch { /* 忽略壞狀態 */ } }
+      this._rngs.set(id, r);
+    }
+    return this._rngs.get(id);
+  }
+
   _makeCtx(def, config) {
+    const engine = this;
     const id = def.id;
     const allowed = new Set([...(def.requires || []), ...(def.optional || [])]);
     const owns = (key) => key === id || key.startsWith(`${id}.`);
     return {
       id,
-      config,
+      config: deepFreeze(config),
       data: this.data,
+      get rng() { return engine._rngFor(id); },
       services: this.services,
       log: (...a) => this._log?.(`[${id}]`, ...a),
 
@@ -306,4 +422,13 @@ export class Engine {
       describeCommandsForAI: ({ actor = null } = {}) => this.commands.describeForAI({ source: 'ai', actor, caller: id }),
     };
   }
+}
+
+// 世界包資料與模組設定是唯讀的：模組不能偷改別人也在用的資料。
+function deepFreeze(o) {
+  if (o && typeof o === 'object' && !Object.isFrozen(o)) {
+    Object.freeze(o);
+    for (const v of Object.values(o)) deepFreeze(v);
+  }
+  return o;
 }

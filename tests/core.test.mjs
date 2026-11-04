@@ -177,7 +177,7 @@ function makeSaveEngine(ids, state, opts = {}) {
 test('存檔：來回一致、停用模組的資料原封保留、載入失敗的切片不被覆蓋', () => {
   const s1 = { crops: [1, 2], caught: ['鯉魚'] };
   const blob = makeSaveEngine(['farm', 'fish'], s1).serializeAll();
-  assert.equal(blob.format, 1);
+  assert.equal(blob.format, 2);
   assert.equal(blob.modules.farm.v, 2);
 
   // 只啟用 farm 載入：fish 變孤兒，再存檔時仍在
