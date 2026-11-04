@@ -188,7 +188,7 @@ function makeUnknown() {
 const KIND_PRESET = { tree: 'tree_pine', bush: 'bush_berry', rock: 'rock', forage: 'shell', home: 'home', station: 'station', plot: 'plot' };
 
 // ---------- 主函式 ----------
-export async function createRenderer3D(canvas, { data, services, lowPower = false }) {
+export async function createRenderer3D(canvas, { data, services, lowPower = false, follow = null }) {
   const { entities, time } = services;
   const isl = data.island;
   const W = isl.size.w, H = isl.size.h;
@@ -209,7 +209,11 @@ export async function createRenderer3D(canvas, { data, services, lowPower = fals
 
   const span = Math.max(W, H) * TILE;
   const camera = new THREE.PerspectiveCamera(42, 4 / 3, 0.5, 400);
-  const CAM_POS = new THREE.Vector3(0, span * 0.58, span * 0.7), CAM_TARGET = new THREE.Vector3(0, 0, 2);
+  // follow：鏡頭跟著某個實體（通常是玩家），否則看整張地圖
+  const followEnt = () => (follow ? entities.get(follow) : null);
+  const fe0 = followEnt();
+  const CAM_TARGET = fe0 ? new THREE.Vector3(wx(fe0.x), 0, wz(fe0.y)) : new THREE.Vector3(0, 0, 2);
+  const CAM_POS = fe0 ? CAM_TARGET.clone().add(new THREE.Vector3(0, 24, 28)) : new THREE.Vector3(0, span * 0.58, span * 0.7);
   camera.position.copy(CAM_POS);
   const controls = new OrbitControls(camera, canvas);
   controls.target.copy(CAM_TARGET);
@@ -314,6 +318,7 @@ export async function createRenderer3D(canvas, { data, services, lowPower = fals
         const i = e.state?.index ?? houseSeq++;
         rec.part = makeHouse(i);
         root.rotation.y = p === 'house' ? Math.atan2(-wx(e.x), -wz(e.y)) : 0;
+        if (p === 'home') { rec.part.scale.setScalar(0.72); rec.part.position.z = -0.4; } // 島上的家佔一格，比原型的房子小一點
         rec.born = clock.t; root.scale.setScalar(p === 'house' ? 0.01 : 1);
         break;
       }
@@ -375,7 +380,7 @@ export async function createRenderer3D(canvas, { data, services, lowPower = fals
   const fit = (sp) => {
     if (!sp || !sp.visible || !sp.userData.base) return;
     sp.getWorldPosition(tmp);
-    const k = THREE.MathUtils.clamp(camera.position.distanceTo(tmp) / 45, 0.4, 1.7);
+    const k = THREE.MathUtils.clamp(camera.position.distanceTo(tmp) / 45, follow ? 0.75 : 0.4, 1.7); // 跟隨鏡頭比較近，名牌不要縮太小
     sp.scale.set(sp.userData.base.w * k, sp.userData.base.h * k, 1);
   };
 
@@ -437,6 +442,12 @@ export async function createRenderer3D(canvas, { data, services, lowPower = fals
       fit(rec.label); fit(rec.bubble);
     }
 
+    const fe = followEnt();
+    if (fe) { // 鏡頭平滑跟隨：目標與相機一起平移，保留玩家自己轉的角度
+      const dx = wx(fe.x) - controls.target.x, dz = wz(fe.y) - controls.target.z, k = Math.min(1, frameDt * 4);
+      controls.target.x += dx * k; controls.target.z += dz * k;
+      camera.position.x += dx * k; camera.position.z += dz * k;
+    }
     controls.update();
     renderer.render(scene, camera);
   }
@@ -445,7 +456,12 @@ export async function createRenderer3D(canvas, { data, services, lowPower = fals
     name: '3d',
     render,
     resize,
-    resetCamera() { camera.position.copy(CAM_POS); controls.target.copy(CAM_TARGET); controls.update(); },
+    resetCamera() {
+      const fe = followEnt();
+      if (fe) { controls.target.set(wx(fe.x), 0, wz(fe.y)); camera.position.copy(controls.target).add(new THREE.Vector3(0, 24, 28)); }
+      else { camera.position.copy(CAM_POS); controls.target.copy(CAM_TARGET); }
+      controls.update();
+    },
     // 螢幕座標 → 格子座標（點地面移動用）：射線打到 y=0 平面
     toWorld(clientX, clientY) {
       const r = canvas.getBoundingClientRect();

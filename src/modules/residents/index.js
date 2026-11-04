@@ -17,8 +17,8 @@ export default {
   requires: [],
   optional: ['social', 'quests-diary'],
   conflicts: [],
-  emits: ['residents:decided', 'residents:announced'],
-  config: { thinkEvery: 7, thinkJitter: 3, sayFor: 8, ring: null },
+  emits: ['residents:decided', 'residents:announced', 'residents:greeted'],
+  config: { thinkEvery: 7, thinkJitter: 3, sayFor: 8, ring: null, stroll: true, strollRadius: 2.5, greetDistance: 2 },
 
   init(ctx) {
     const { entities } = ctx.services;
@@ -37,8 +37,20 @@ export default {
     }));
     const byId = new Map(list.map((r) => [r.id, r]));
 
+    // 地形：居民散步時不走進水裡
+    const isl = ctx.data.island;
+    const walkable = (x, y) => {
+      const tx = Math.round(x), ty = Math.round(y);
+      if (!isl || tx < 0 || ty < 0 || tx >= isl.size.w || ty >= isl.size.h) return false;
+      return isl.legend[isl.terrain[ty][tx]]?.walkable !== false;
+    };
+
     function placeEntities() {
       entities.removeOwner('residents');
+      for (const r of list) {
+        const h = homes.get(r.id);
+        if (h) entities.add({ id: `home.${r.id}`, kind: 'home', owner: 'residents', ref: r.id, art: 'home', x: h.x, y: h.y, label: `${r.name}的家`, state: { roof: r.color } });
+      }
       list.forEach((r, i) => {
         // 站位：config.ring（圍成一圈，原型小鎮用）＞ 家門口 ＞ 出生點附近
         const ring = cfg.ring;
@@ -46,6 +58,7 @@ export default {
         const h = ring ? { x: ring.x + Math.cos(ang) * ring.rx, y: ring.y + Math.sin(ang) * ring.ry }
           : homes.has(r.id) ? { x: homes.get(r.id).x, y: homes.get(r.id).y + 0.9 }
           : { x: spawn.x + (i % 3) - 1, y: spawn.y + 1 + Math.floor(i / 3) };
+        r.anchor = { x: h.x, y: h.y };
         entities.add({ id: `resident.${r.id}`, kind: 'resident', owner: 'residents', ref: r.id, x: h.x, y: h.y, label: r.name,
           state: { color: r.color, role: r.role, look: r.look, model: r.model, say: '', busy: false } });
       });
@@ -53,6 +66,26 @@ export default {
     function syncEntity(r) {
       const e = entities.get(`resident.${r.id}`);
       if (e) { e.state.say = clock < r.sayUntil ? r.say : ''; e.state.busy = r.busy; }
+    }
+    // 散步：在家附近慢慢走（生活感）。打招呼後會停下來一會兒。
+    function stroll(r, dt) {
+      if (!cfg.stroll || cfg.ring || !r.anchor) return;
+      const e = entities.get(`resident.${r.id}`);
+      if (!e) return;
+      if (clock < (r.pauseUntil || 0)) return;
+      if (!r.walkTo) {
+        if (ctx.rng.chance(dt * 0.25)) {
+          for (let i = 0; i < 6; i++) {
+            const a = ctx.rng.next() * Math.PI * 2, d = ctx.rng.next() * cfg.strollRadius;
+            const x = r.anchor.x + Math.cos(a) * d, y = r.anchor.y + Math.sin(a) * d;
+            if (walkable(x, y)) { r.walkTo = { x, y }; break; }
+          }
+        }
+        return;
+      }
+      const dx = r.walkTo.x - e.x, dy = r.walkTo.y - e.y, dist = Math.hypot(dx, dy), step = 1.1 * dt;
+      if (dist <= step) { entities.move(e.id, r.walkTo.x, r.walkTo.y); r.walkTo = null; r.pauseUntil = clock + 2 + ctx.rng.next() * 4; }
+      else entities.move(e.id, e.x + (dx / dist) * step, e.y + (dy / dist) * step);
     }
     placeEntities();
 
@@ -92,12 +125,37 @@ export default {
         clock += dt;
         for (const r of list) {
           if (!r.busy && clock >= r.nextAt) think(r);
+          stroll(r, dt);
           syncEntity(r);
         }
       },
     });
 
     // ---------- 玩家指令 ----------
+    const near = (who) => {
+      const p = entities.get('player'), e = entities.get(`resident.${who}`);
+      return p && e ? Math.hypot(p.x - e.x, p.y - e.y) <= cfg.greetDistance : false;
+    };
+    const greetings = ctx.data.text?.dialogue?.greetings?.length ? ctx.data.text.dialogue.greetings : ['你好呀！'];
+    ctx.registerCommand({
+      id: 'residents.greet', label: '打招呼', description: '和身邊的居民打招呼',
+      params: { who: { type: 'ref', of: 'residents' } },
+      canRun: ({ who }) => (near(who) ? true : '走近一點才能打招呼'),
+      run({ who }) {
+        const r = byId.get(who);
+        const line = ctx.rng.chance(0.4) ? r.card.catchphrase || ctx.rng.pick(greetings) : ctx.rng.pick(greetings);
+        r.say = line; r.sayUntil = clock + cfg.sayFor;
+        r.walkTo = null; r.pauseUntil = clock + 6;
+        remember(r, 'talk', '玩家來跟我打招呼');
+        notify(`💬 ${r.name}：${line}`);
+        ctx.emit('residents:greeted', { who });
+        syncEntity(r);
+        return line;
+      },
+    });
+    ctx.registerEntityKind('resident', { label: '居民', interactions: [{ label: (e) => `和${e.label}打招呼`, command: 'residents.greet', args: (e) => ({ who: e.ref }) }] });
+    ctx.registerEntityKind('home', { label: '居民的家' });
+
     ctx.registerCommand({
       id: 'residents.announce', label: '發公告', description: '對全島居民說一句話，會影響他們接下來的想法',
       params: { text: { type: 'string', maxLen: 40, truncate: true, userText: true } },
@@ -153,7 +211,10 @@ export default {
     // ---------- 存檔 ----------
     ctx.registerSaveSlice({
       key: 'residents', version: 1,
-      serialize: () => ({ clock, list: list.map((r) => ({ id: r.id, card: r.card, memory: r.memory, say: r.say, sayUntil: r.sayUntil, nextAt: r.nextAt })) }),
+      serialize: () => ({ clock, list: list.map((r) => {
+        const e = entities.get(`resident.${r.id}`);
+        return { id: r.id, card: r.card, memory: r.memory, say: r.say, sayUntil: r.sayUntil, nextAt: r.nextAt, pos: e ? { x: e.x, y: e.y } : null };
+      }) }),
       deserialize: (d) => {
         clock = Number(d?.clock) || 0;
         for (const s of d?.list || []) {
@@ -162,6 +223,7 @@ export default {
           Object.assign(r.card, s.card || {});
           r.memory = Array.isArray(s.memory) ? s.memory.slice(-MEMORY_MAX) : [];
           r.say = s.say || ''; r.sayUntil = s.sayUntil || 0; r.nextAt = s.nextAt ?? r.nextAt;
+          if (Number.isFinite(s.pos?.x) && Number.isFinite(s.pos?.y) && walkable(s.pos.x, s.pos.y)) entities.move(`resident.${r.id}`, s.pos.x, s.pos.y);
         }
       },
     });
