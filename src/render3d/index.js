@@ -169,7 +169,7 @@ function makeRoundTree() {
 }
 function makePlot() {
   const g = new THREE.Group();
-  const m = new THREE.Mesh(new THREE.BoxGeometry(TILE * 0.92, 0.18, TILE * 0.92), std(0x8a6440, 1)); m.position.y = 0.09; m.receiveShadow = true; g.add(m);
+  const m = new THREE.Mesh(new THREE.BoxGeometry(TILE * 0.92, 0.18, TILE * 0.92), new THREE.MeshStandardMaterial({ color: 0x8a6440, roughness: 1 })); m.position.y = 0.09; m.receiveShadow = true; g.add(m);
   return g;
 }
 function makeStation() {
@@ -458,6 +458,21 @@ export async function createRenderer3D(canvas, { data, services, lowPower = fals
       if (st.depleted !== undefined && rec.part) {
         rec.part.scale.setScalar(st.depleted ? 0.45 : 1);
         if (rec.part.userData.fruits) rec.part.userData.fruits.visible = !st.depleted;
+      }
+      if (rec.preset === 'plot') { // 作物：依階段長高，成熟時變金黃
+        if (!rec.crop) {
+          rec.crop = new THREE.Group();
+          for (const dx of [-0.6, 0.6]) for (const dz of [-0.6, 0.6]) {
+            const m = new THREE.Mesh(new THREE.ConeGeometry(0.28, 1, 6), std(0x5fae4a)); m.position.set(dx, 0.5, dz); m.castShadow = true; rec.crop.add(m);
+          }
+          rec.part.add(rec.crop);
+        }
+        rec.crop.visible = !!st.crop;
+        const h = st.ready ? 1.3 : 0.35 + 0.3 * (st.stage || 0);
+        rec.crop.scale.set(1, h, 1);
+        const col = st.ready ? 0xe8b84a : 0x5fae4a;
+        rec.crop.children.forEach((m) => m.material.color.setHex(col));
+        rec.part.children[0].material.color.setHex(st.wateredDay != null && st.wateredDay === time.day ? 0x6b4a2e : 0x8a6440);
       }
       if (rec.preset === 'depot') {
         rec.part.userData.logs.forEach((m, i) => { m.visible = i < Math.ceil(Math.min(st.wood ?? 0, 24) / 2); });
