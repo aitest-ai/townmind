@@ -62,6 +62,20 @@ Object.assign(PRESETS, {
     g.strokeStyle = '#4a7fd0'; g.setLineDash([4, 3]); g.lineWidth = 1.5; g.strokeRect(cx - t * 0.45, cy - t * 0.36, t * 0.9, t * 0.72); g.setLineDash([]);
     g.fillStyle = 'rgba(74,127,208,.35)'; g.fillRect(cx - t * 0.45, cy + t * 0.36 - t * 0.72 * k, t * 0.9, t * 0.72 * k);
   },
+  // 家具（佈置模組）：簡單的俯視造型，state.rot 由外面統一旋轉
+  fence(g, cx, cy, t) {
+    g.fillStyle = '#b08850';
+    g.fillRect(cx - t * 0.45, cy - t * 0.06, t * 0.9, t * 0.12);
+    for (const dx of [-0.4, 0, 0.4]) g.fillRect(cx + dx * t - t * 0.05, cy - t * 0.14, t * 0.1, t * 0.28);
+  },
+  chair(g, cx, cy, t) {
+    g.fillStyle = '#c4935a'; g.fillRect(cx - t * 0.22, cy - t * 0.18, t * 0.44, t * 0.4);
+    g.fillStyle = '#8f6236'; g.fillRect(cx - t * 0.22, cy - t * 0.3, t * 0.44, t * 0.12);
+  },
+  table(g, cx, cy, t) {
+    g.fillStyle = '#a97845'; g.fillRect(cx - t * 0.38, cy - t * 0.26, t * 0.76, t * 0.52);
+    g.fillStyle = 'rgba(255,255,255,.18)'; g.fillRect(cx - t * 0.32, cy - t * 0.2, t * 0.3, t * 0.1);
+  },
   marker(g, cx, cy, t) {
     g.strokeStyle = 'rgba(255,255,255,.95)'; g.lineWidth = Math.max(2, t * 0.08);
     g.beginPath(); g.ellipse(cx, cy + t * 0.15, t * 0.32, t * 0.18, 0, 0, Math.PI * 2); g.stroke();
@@ -135,8 +149,9 @@ export function createRenderer2D(canvas, { data, services }) {
     }
     const p = PRESETS[presetOf(e)];
     const k = e.state?.max ? 0.4 + 0.6 * (e.state.left / e.state.max) : 1; // 資源越少畫越小
+    const rot = (e.state?.rot ?? 0) * Math.PI / 2;
     if (p) {
-      if (k !== 1) { g.save(); g.translate(cx, cy); g.scale(k, k); p(g, 0, 0, t, e); g.restore(); } else p(g, cx, cy, t, e);
+      if (k !== 1 || rot) { g.save(); g.translate(cx, cy); g.rotate(rot); g.scale(k, k); p(g, 0, 0, t, e); g.restore(); } else p(g, cx, cy, t, e);
     } else { g.fillStyle = '#777'; circle(g, cx, cy, t * 0.15); }
   }
 
