@@ -106,12 +106,10 @@
     {
       "id": "building",
       "name": "佈置與建造",
-      "status": "planned",
-      "summary": "網格吸附擺放、旋轉、收納家具；蓋房子。",
+      "status": "implemented",
+      "summary": "網格吸附擺放、旋轉、收納家具（蓋房子之後再加）。",
       "requires": [],
-      "optional": [
-        "crafting"
-      ],
+      "optional": [],
       "conflicts": [],
       "needsData": [
         "items"

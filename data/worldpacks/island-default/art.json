@@ -62,5 +62,17 @@
   },
   "ashi": {
     "type": "procedural"
+  },
+  "fence": {
+    "type": "procedural",
+    "preset": "fence"
+  },
+  "chair": {
+    "type": "procedural",
+    "preset": "chair"
+  },
+  "table": {
+    "type": "procedural",
+    "preset": "table"
   }
 }

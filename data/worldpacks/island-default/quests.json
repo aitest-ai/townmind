@@ -224,6 +224,28 @@
         ],
         "points": 10
       }
+    },
+    {
+      "id": "decorate",
+      "line": "main",
+      "title": "佈置你的小島",
+      "description": "把做好的家具放在島上（「佈置」面板）。",
+      "giver": "xiaogai",
+      "requires": [
+        "first_furniture"
+      ],
+      "module": "building",
+      "conditions": [
+        {
+          "type": "event",
+          "event": "building:placed",
+          "count": 1,
+          "label": "擺 1 件家具"
+        }
+      ],
+      "rewards": {
+        "points": 15
+      }
     }
   ]
 }

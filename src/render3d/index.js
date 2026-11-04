@@ -179,6 +179,30 @@ function makeStation() {
   g.traverse((o) => { if (o.isMesh) o.castShadow = true; });
   return g;
 }
+// 家具（佈置模組）
+function makeFence() {
+  const g = new THREE.Group(), wood = std(0xb08850);
+  for (const x of [-1, 0, 1]) { const p = new THREE.Mesh(new THREE.BoxGeometry(0.22, 1.2, 0.22), wood); p.position.set(x, 0.6, 0); g.add(p); }
+  for (const y of [0.45, 0.9]) { const r = new THREE.Mesh(new THREE.BoxGeometry(2.3, 0.16, 0.12), wood); r.position.set(0, y, 0); g.add(r); }
+  g.traverse((o) => { if (o.isMesh) o.castShadow = true; });
+  return g;
+}
+function makeChair() {
+  const g = new THREE.Group(), wood = std(0xc4935a), dark = std(0x8f6236);
+  const seat = new THREE.Mesh(new THREE.BoxGeometry(1.0, 0.14, 1.0), wood); seat.position.y = 0.7; g.add(seat);
+  const back = new THREE.Mesh(new THREE.BoxGeometry(1.0, 0.9, 0.14), dark); back.position.set(0, 1.2, -0.43); g.add(back);
+  for (const [x, z] of [[-0.4, -0.4], [0.4, -0.4], [-0.4, 0.4], [0.4, 0.4]]) { const l = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.7, 0.12), dark); l.position.set(x, 0.35, z); g.add(l); }
+  g.traverse((o) => { if (o.isMesh) o.castShadow = true; });
+  return g;
+}
+function makeTable() {
+  const g = new THREE.Group(), wood = std(0xa97845);
+  const top = new THREE.Mesh(new THREE.BoxGeometry(1.9, 0.16, 1.3), wood); top.position.y = 1.0; g.add(top);
+  for (const [x, z] of [[-0.8, -0.5], [0.8, -0.5], [-0.8, 0.5], [0.8, 0.5]]) { const l = new THREE.Mesh(new THREE.BoxGeometry(0.14, 1.0, 0.14), wood); l.position.set(x, 0.5, z); g.add(l); }
+  g.traverse((o) => { if (o.isMesh) o.castShadow = true; });
+  return g;
+}
+
 function makeUnknown() {
   const g = new THREE.Group();
   const m = new THREE.Mesh(new THREE.SphereGeometry(0.4, 8, 6), std(0x888888)); m.position.y = 0.4; g.add(m);
@@ -316,6 +340,9 @@ export async function createRenderer3D(canvas, { data, services, lowPower = fals
       case 'shell': rec.part = makeShell(); break;
       case 'plot': rec.part = makePlot(); break;
       case 'station': rec.part = makeStation(); break;
+      case 'fence': rec.part = makeFence(); break;
+      case 'chair': rec.part = makeChair(); break;
+      case 'table': rec.part = makeTable(); break;
       case 'house': case 'home': {
         const i = e.state?.index ?? houseSeq++;
         rec.part = makeHouse(i);
@@ -424,6 +451,7 @@ export async function createRenderer3D(canvas, { data, services, lowPower = fals
         }
       } else {
         rec.o.position.set(px, 0, pz);
+        if (st.rot !== undefined) rec.o.rotation.y = -st.rot * Math.PI / 2; // 家具旋轉（佈置模組）
       }
       // 依狀態調整外觀
       if (st.max && st.left !== undefined && rec.part) rec.part.scale.setScalar(0.3 + 0.7 * (st.left / st.max));
