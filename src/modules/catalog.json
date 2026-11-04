@@ -139,11 +139,11 @@
     {
       "id": "capture",
       "name": "捕捉",
-      "status": "planned",
-      "summary": "釣魚、捕蟲、陷阱、拍照圖鑑。呈現方式（放生、收藏、拍照）由世界包決定；兒童版只允許不呈現傷害的方式。",
+      "status": "implemented",
+      "summary": "釣魚、捕蟲、拍照與圖鑑；呈現方式由世界包決定（收集／抓了放回／拍照），兒童版只允許不呈現傷害的方式；失敗只是「跑掉了」。",
       "requires": [],
       "optional": [
-        "weather-seasons"
+        "actions"
       ],
       "conflicts": [],
       "needsData": [
