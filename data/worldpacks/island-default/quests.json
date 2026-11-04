@@ -420,6 +420,56 @@
       "rewards": {
         "points": 15
       }
+    },
+    {
+      "id": "first_race",
+      "line": "main",
+      "title": "滑板車環島賽",
+      "description": "到海邊的起跑門，和阿福、大木比一場滑板車！",
+      "giver": "xiaogai",
+      "requires": [
+        "welcome"
+      ],
+      "module": "racing",
+      "conditions": [
+        {
+          "type": "event",
+          "event": "racing:finished",
+          "match": {
+            "mode": "race"
+          },
+          "count": 1,
+          "label": "跑完 1 場比賽"
+        }
+      ],
+      "rewards": {
+        "points": 15
+      }
+    },
+    {
+      "id": "beat_ghost",
+      "line": "side",
+      "title": "超越自己",
+      "description": "在時間挑戰中刷新自己的紀錄。",
+      "requires": [
+        "first_race"
+      ],
+      "module": "racing",
+      "conditions": [
+        {
+          "type": "event",
+          "event": "racing:finished",
+          "match": {
+            "mode": "time",
+            "record": true
+          },
+          "count": 2,
+          "label": "刷新紀錄 2 次"
+        }
+      ],
+      "rewards": {
+        "points": 10
+      }
     }
   ]
 }

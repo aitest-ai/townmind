@@ -66,6 +66,10 @@
       "config": {
         "dayLengthMinutes": 12
       }
+    },
+    "racing": {
+      "enabled": true,
+      "config": {}
     }
   },
   "startingInventory": [

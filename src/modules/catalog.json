@@ -237,18 +237,17 @@
     },
     {
       "id": "racing",
-      "status": "planned",
+      "status": "implemented",
       "requires": [],
       "optional": [
-        "weather-seasons",
-        "economy",
         "residents"
       ],
       "needsData": [
         "tracks"
       ],
-      "summary": "競速賽事：滑板車、小舟、單輪車、風箏滑翔等。賽道由世界包 tracks.json 定義（檢查點、地形速度係數、道具箱）。無碰撞傷害、可愛的失誤動畫（轉圈、掉進水裡被撈起）。AI 居民可當對手，只選擇『油門、路線、使用道具』等受限指令。",
-      "schema": true
+      "summary": "第一版：滑板車、世界包 tracks.json 定義的賽道（檢查點、地形速度）、居民當對手（只能用受限指令 racing.drive 選油門與路線）、時間挑戰與幽靈重播（輸入可重播驗證成績）。無碰撞傷害，撞到岸邊只會轉圈圈。",
+      "schema": true,
+      "name": "競速"
     },
     {
       "id": "minigames",
