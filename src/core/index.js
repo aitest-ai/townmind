@@ -6,3 +6,5 @@ export { parseOverrides, resolveEnabled } from './flags.js';
 export { PACK_FILES, loadPack, validatePack } from './worldpack.js';
 export { SAFE_PRESENTATIONS, CORE_FILES, schemaFiles } from './worldpack.js';
 export { defaultTextFilter } from './textfilter.js';
+export { createRng, hashSeed } from './rng.js';
+export { createCoreServices, createTime, createEntities, createInventory } from './services/index.js';
